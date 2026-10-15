@@ -24,18 +24,19 @@ function quoteDate(q){
 }
 function signal(x){
  const v=value(x),p=price(x);
- if(!v)return ['暂停报价·补证据','pending'];
- if(new Date().toISOString().slice(0,10)>research.window[1])return ['模型已过期·须重估','bad'];
- if(p===null)return ['无有效行情','review'];
+ if(!v)return ['暂不估值','pending','模型证据不足；行情仍正常显示'];
+ if(new Date().toISOString().slice(0,10)>research.window[1])return ['暂不估值','pending','模型已过期，须重估'];
+ if(p===null)return ['暂不估值','pending','缺有效行情，暂不比较'];
  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
  const part=k=>parts.find(p=>p.type===k).value;const today=part('year')+'-'+part('month')+'-'+part('day');
- if(quoteDate(x.quote)!==today)return ['历史行情·仅研究','review'];
- if(x.gate==='failed')return ['论点失效·暂停','bad'];
- if(p<v.lo)return ['低于模型区·先查错','review'];
- if(p<=v.hi)return [x.gate==='verified'?'价区与条件已核验':'价格达区·条件未验','watch'];
- if(p>v.ev)return ['高于模型中枢·非卖点','reduce'];
- return ['模型内等待·条件未验','hold'];
+ if(quoteDate(x.quote)!==today)return ['暂不估值','pending','行情非今日，保留历史报价供参考'];
+ if(x.gate==='failed')return ['暂不估值','bad','论点失效，须重建模型'];
+ if(p<=v.hi)return ['有折价','watch',p<v.lo?'低于关注区下沿，先检查是否遗漏风险':'价格不高于条件关注区上沿'];
+ if(p>v.ev)return ['有溢价','reduce','高于主观加权情景价'];
+ return ['接近估值','hold','高于关注区上沿，不高于主观加权情景价'];
 }
+function progress(x){return x.audit?.stage||(x.model?'已有草案，待完善依据':'资料待补，模型未完成');}
+function fulfillment(x){return x.gate==='verified'?'成立条件已核验':x.gate==='failed'?'论点失效':'催化待观察';}
 function formula(x,i){
  const m=x.model;if(!m)return '未建立可追溯的当前模型';
  if(m.type==='fcf')return fmt(m.inputs[i],1)+'元FCFE ÷ '+fmt(m.yields[i]*100,1)+'% + '+m.extra[i]+'元投资折价值';
@@ -47,27 +48,30 @@ function render(){
  const list=state.filter(x=>{
  const v=value(x),p=price(x);
  return [x.name,x.code,x.catalyst,x.risk].join(' ').toLowerCase().includes(query)&&
- (filter==='all'||filter==='core'&&x.tier==='core'||filter==='draft'&&x.model||filter==='pending'&&!x.model||filter==='zone'&&v&&p!==null&&p<=v.hi);
+ (filter==='all'||filter==='core'&&x.tier==='core'||filter==='draft'&&x.model||filter==='pending'&&!x.model||filter==='zone'&&signal(x)[0]==='有折价');
  });
  $('rows').innerHTML=list.map(x=>{
  const v=value(x),p=price(x),s=signal(x);
  const raw=x.quote?.price;
  return '<tr tabindex="0" data-code="'+x.code+'"><td><div class="name">'+escapeHTML(x.name)+'</div><span class="code">'+x.market+x.code+' · '+x.kind+'</span></td>'+
  '<td class="num">'+fmt(raw,x.kind==='ETF'?3:2)+(x.market==='HK'?' HKD':' CNY')+'<span class="meta">'+escapeHTML(x.quote?.time||'缺失')+'</span><span class="meta">'+escapeHTML(x.quoteOrigin)+'</span>'+(x.market==='HK'?'<span class="meta">≈ '+fmt(p,2)+' CNY</span>':'')+'</td>'+
- '<td><span class="pill '+s[1]+'">'+s[0]+'</span><span class="meta">'+(x.model?'主观草案 · 条件待核验':'绝对买点未完成重估')+'</span></td>'+
+ '<td><span class="pill '+s[1]+'">'+s[0]+'</span><span class="meta">'+escapeHTML(s[2])+'</span></td>'+
+ '<td><span class="pill pending">'+escapeHTML(progress(x))+'</span><span class="meta">'+fulfillment(x)+'</span></td>'+
  '<td class="num">'+(v?fmt(v.cases[scenario]):'暂停')+'</td><td class="num">'+(v?fmt(v.ev):'暂停')+'</td>'+
  '<td class="num">'+(v?fmt(v.lo)+'–'+fmt(v.hi):'不沿用旧值')+'</td>'+
  '<td class="num">'+(v&&p!==null?pct(v.cases[0]/p-1)+' / '+pct(v.cases[2]/p-1):'—')+'</td>'+
  '<td class="thesis">'+escapeHTML(x.catalyst)+'</td><td class="report factcell">'+escapeHTML(x.fact)+'<span class="meta">'+escapeHTML(x.verification)+'</span></td></tr>';
  }).join('');
  const drafts=state.filter(x=>x.model).length;
- $('stats').innerHTML=[['研究范围',state.length+'项'],['可追溯情景草案',drafts+'项'],['暂缓绝对报价',state.length-drafts+'项'],['基本面条件已核验',state.filter(x=>x.gate==='verified').length+'项'],['复核日期',research.asOf],['当前列表',list.length+'项']].map(a=>'<div class="stat"><small>'+a[0]+'</small><strong>'+a[1]+'</strong></div>').join('');
+ $('stats').innerHTML=[['研究范围',state.length+'项'],['可追溯情景草案',drafts+'项'],['模型尚未完成',state.length-drafts+'项'],['成立条件已核验',state.filter(x=>x.gate==='verified').length+'项'],['复核日期',research.asOf],['当前列表',list.length+'项']].map(a=>'<div class="stat"><small>'+a[0]+'</small><strong>'+a[1]+'</strong></div>').join('');
 }
 function openDetail(x){
  const v=value(x),p=price(x);
  $('dCode').textContent=x.market+x.code+' · 3–6月评价窗口 · 全部估值为人民币';
  $('dName').textContent=x.name;
- let body='<div class="audit">当前条件状态：'+(x.gate==='verified'?'已核验':x.gate==='failed'?'已失效':'待人工核验')+'。模型中的上涨幅度不是预测承诺或统计胜率。</div>';
+ let body='<div class="audit">价格判断：'+signal(x)[0]+'；研究进度：'+escapeHTML(progress(x))+'；经营兑现：'+fulfillment(x)+'。研究完成与未来催化兑现是两回事。折价不自动等于买入，溢价不自动等于卖出。</div>';
+ const a=x.audit;
+ body+='<section class="section"><h3>研究完成度与下一步</h3><p>已完成：'+escapeHTML(a?.done||(x.model?'财报锚点整理、情景计算链、催化与风险框架。':'标的识别及催化、风险框架。'))+'</p><p>仍缺：'+escapeHTML(a?.missing||(x.model?'从财报到未来盈利的分项推导、估值倍数及情景权重依据；草案尚非完整估值。':'当期成分权重、成分盈利/现金流及同日净值，尚不能给出可靠的绝对价区。'))+'</p><p>下一核验：'+escapeHTML(a?.next||x.catalyst)+'</p>'+(a?'<p class="small">补研日期：'+escapeHTML(a.date)+'；'+escapeHTML(a.conclusion)+'</p>':'')+'</section>';
  body+='<section class="section"><h3>已核对事实 / 数据边界</h3><p>'+escapeHTML(x.fact)+'</p><p class="small"><a href="'+escapeHTML(x.source)+'" target="_blank" rel="noopener">来源 / 待核验入口 ↗</a></p></section>';
  if(v){
  body+='<section class="section"><h3>可复算情景：参数均为研究假设</h3><div class="grid">'+scenarioNames.map((n,i)=>'<div class="card inputs"><small>'+n+' · 主观权重 '+fmt(x.model.weights[i]*100)+'%</small><strong>'+fmt(v.cases[i])+'元</strong><p class="small">'+escapeHTML(formula(x,i))+'</p><p class="small">情景价格收益 '+(p===null?'缺行情':pct(v.cases[i]/p-1))+'</p></div>').join('')+'</div><p class="small">EPS/BPS/FCFE为未来12个月或正常化参数；不是3–6个月累计利润。参数不是公司指引或一致预期。修复情景需要催化发生，不能仅因跌深而提升权重。</p></section>';
