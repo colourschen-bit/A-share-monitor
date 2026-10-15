@@ -30,11 +30,15 @@ function signal(x){
  if(p===null)return ['暂不估值','pending','缺有效行情，暂不比较'];
  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
  const part=k=>parts.find(p=>p.type===k).value;const today=part('year')+'-'+part('month')+'-'+part('day');
- if(quoteDate(x.quote)!==today)return ['暂不估值','pending','行情非今日，保留历史报价供参考'];
+ const dated=quoteDate(x.quote);
+ if(!dated||!Number.isFinite(Date.parse(dated))||dated>today)return ['暂不估值','pending','行情日期无效，暂不比较'];
+ // A calendar rollover does not invalidate a valuation. Keep dated historical
+ // comparisons explicit rather than presenting old quotes as live prices.
+ const reference=dated!==today?'按 '+dated+' 报价作历史比较，非实时判断；':'';
  if(x.gate==='failed')return ['暂不估值','bad','论点失效，须重建模型'];
- if(p<=v.hi)return ['有折价','watch',p<v.lo?'低于关注区下沿，先检查是否遗漏风险':'价格不高于条件关注区上沿'];
- if(p>v.ev)return ['有溢价','reduce','高于条件化基准估值'];
- return ['接近估值','hold','高于关注区上沿，不高于基准估值'];
+ if(p<=v.hi)return ['有折价','watch',reference+(p<v.lo?'低于关注区下沿，先检查是否遗漏风险':'价格不高于条件关注区上沿')];
+ if(p>v.ev)return ['有溢价','reduce',reference+'高于条件化基准估值'];
+ return ['接近估值','hold',reference+'高于关注区上沿，不高于基准估值'];
 }
 function progress(x){return x.audit?.stage||(x.model?'已有草案，待完善依据':'资料待补，模型未完成');}
 function fulfillment(x){return x.gate==='verified'?'成立条件已核验':x.gate==='failed'?'论点失效':'催化待观察';}
@@ -70,7 +74,7 @@ function openDetail(x){
  const v=value(x),p=price(x);
  $('dCode').textContent=x.market+x.code+' · 3–6月评价窗口 · 全部估值为人民币';
  $('dName').textContent=x.name;
- let body='<div class="audit">价格判断：'+signal(x)[0]+'；研究进度：'+escapeHTML(progress(x))+'；经营兑现：'+fulfillment(x)+'。研究完成与未来催化兑现是两回事。折价不自动等于买入，溢价不自动等于卖出。</div>';
+ let body='<div class="audit">价格判断：'+signal(x)[0]+'（'+escapeHTML(signal(x)[2])+'）；报价时间：'+escapeHTML(x.quote?.time||'缺失')+'；研究进度：'+escapeHTML(progress(x))+'；经营兑现：'+fulfillment(x)+'。研究完成与未来催化兑现是两回事。折价不自动等于买入，溢价不自动等于卖出。</div>';
  const a=x.audit;
  body+='<section class="section"><h3>研究完成度与下一步</h3><p>已完成：'+escapeHTML(a?.done||(x.model?'财报锚点整理、情景计算链、催化与风险框架。':'标的识别及催化、风险框架。'))+'</p><p>仍缺：'+escapeHTML(a?.missing||(x.model?'从财报到未来盈利的分项推导、估值倍数及情景权重依据；草案尚非完整估值。':'当期成分权重、成分盈利/现金流及同日净值，尚不能给出可靠的绝对价区。'))+'</p><p>下一核验：'+escapeHTML(a?.next||x.catalyst)+'</p>'+(a?'<p class="small">补研日期：'+escapeHTML(a.date)+'；'+escapeHTML(a.conclusion)+'</p>':'')+'</section>';
  body+='<section class="section"><h3>已核对事实 / 数据边界</h3><p>'+escapeHTML(x.fact)+'</p><p class="small"><a href="'+escapeHTML(x.source)+'" target="_blank" rel="noopener">来源 / 待核验入口 ↗</a></p></section>';
