@@ -2,13 +2,14 @@
 const research=window.RESEARCH;
 let scenario=1;
 const scenarioNames=['压力','基准','修复'];
-let state=research.assets.map(x=>({...x,quote:x.snapshot,quoteOrigin:'2026-10-15盘中快照'}));
+let state=research.assets.map(x=>({...x,quote:x.snapshot,quoteOrigin:(quoteDate(x.snapshot)||'既有')+'历史快照'}));
 const $=id=>document.getElementById(id);
 const escapeHTML=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=(n,d=0)=>Number.isFinite(n)?n.toLocaleString('zh-CN',{minimumFractionDigits:d,maximumFractionDigits:d}):'—';
 const pct=n=>Number.isFinite(n)?(n>=0?'+':'')+(n*100).toFixed(0)+'%':'—';
 function cases(x){
  const m=x.model;if(!m)return null;
+ if(m.type==='index')return m.fair.map((v,i)=>m.anchorNav*(v/m.currentMetric)*m.fundamental[i]);
  return m.inputs.map((v,i)=>m.type==='fcf'?v/m.yields[i]+m.extra[i]:v*m.multiples[i]+m.extra[i]);
 }
 function value(x){
@@ -44,6 +45,7 @@ function progress(x){return x.audit?.stage||(x.model?'已有草案，待完善�
 function fulfillment(x){return x.gate==='verified'?'成立条件已核验':x.gate==='failed'?'论点失效':'催化待观察';}
 function formula(x,i){
  const m=x.model;if(!m)return '未建立可追溯的当前模型';
+ if(m.type==='index')return '锚定净值 '+fmt(m.anchorNav,4)+' × 合理'+m.metric+' '+fmt(m.fair[i],2)+' ÷ 当前'+m.metric+' '+fmt(m.currentMetric,2)+' × 基本面系数 '+fmt(m.fundamental[i],2);
  if(m.type==='fcf')return fmt(m.inputs[i],1)+'元FCFE ÷ '+fmt(m.yields[i]*100,1)+'% + '+m.extra[i]+'元投资折价值';
  const label=m.type==='pb'?'BPS':m.type==='opat'?'营运EPS':'EPS';
  return label+' '+fmt(m.inputs[i],2)+'元 × '+fmt(m.multiples[i],2)+(m.extra[i]?' + '+m.extra[i]+'元期权':'');
@@ -68,7 +70,7 @@ function render(){
  '<td class="thesis">'+escapeHTML(x.catalyst)+'</td><td class="report factcell">'+escapeHTML(x.fact)+'<span class="meta">'+escapeHTML(x.verification)+'</span></td></tr>';
  }).join('');
  const drafts=state.filter(x=>x.model).length;
- $('stats').innerHTML=[['独立条件分析',state.filter(x=>x.analysis).length+'项'],['可复算价格情景',drafts+'项'],['定价仍缺数据',state.length-drafts+'项'],['未来成立条件已核验',state.filter(x=>x.gate==='verified').length+'项'],['复核日期',research.asOf],['当前列表',list.length+'项']].map(a=>'<div class="stat"><small>'+a[0]+'</small><strong>'+a[1]+'</strong></div>').join('');
+ $('stats').innerHTML=[['独立条件分析',state.filter(x=>x.analysis).length+'项'],['可复算价格情景',drafts+'项'],['定价模型缺失',state.length-drafts+'项'],['未来成立条件已核验',state.filter(x=>x.gate==='verified').length+'项'],['复核日期',research.asOf],['当前列表',list.length+'项']].map(a=>'<div class="stat"><small>'+a[0]+'</small><strong>'+a[1]+'</strong></div>').join('');
 }
 function openDetail(x){
  const v=value(x),p=price(x);
@@ -87,9 +89,10 @@ function openDetail(x){
  body+='<section class="section"><h3>反身性 / 重叠风险</h3><p>'+escapeHTML(n.reflexivity||n.overlap)+'</p></section>';
  }
  if(v){
- body+='<section class="section"><h3>可复算情景：参数均为研究假设</h3><div class="grid">'+scenarioNames.map((n,i)=>'<div class="card inputs"><small>'+n+' · '+(i===1?'定价参照':'敏感性边界')+'</small><strong>'+fmt(v.cases[i],2)+'元</strong><p class="small">'+escapeHTML(formula(x,i))+'</p><p class="small">情景价格收益 '+(p===null?'缺行情':pct(v.cases[i]/p-1))+'</p></div>').join('')+'</div><p class="small">EPS/BPS为未来12个月或正常化盈利水平参照；半年/前三季桥接不冒充精确逐季预测。3–6个月是催化评价窗口，不保证该窗口实现全年利润。三种情景不分配未经验证的概率，不计算虚假统计胜率。</p></section>';
+ body+='<section class="section"><h3>可复算情景：参数均为研究假设</h3><div class="grid">'+scenarioNames.map((n,i)=>'<div class="card inputs"><small>'+n+' · '+(i===1?'定价参照':'敏感性边界')+'</small><strong>'+fmt(v.cases[i],2)+'元</strong><p class="small">'+escapeHTML(formula(x,i))+'</p><p class="small">情景价格收益 '+(p===null?'缺行情':pct(v.cases[i]/p-1))+'</p></div>').join('')+'</div><p class="small">个股EPS/BPS为未来12个月或正常化盈利水平参照；ETF由锚定净值、指数估值和基本面系数推导。3–6个月是催化评价窗口，不保证该窗口实现全年利润。三种情景不分配未经验证的概率，不计算虚假统计胜率。</p></section>';
+ if(x.model.evidenceUrl)body+='<p class="small"><a href="'+escapeHTML(x.model.evidenceUrl)+'" target="_blank" rel="noopener">估值锚数据来源 ↗</a> · '+escapeHTML(x.model.reference||'')+'</p>';
  body+='<section class="section"><h3>条件关注区与反向核验</h3><p class="small">基准估值 '+fmt(v.ev,2)+'；按12%年化、半年折现后的值 '+fmt(v.pv,2)+'；额外安全边际 '+fmt(x.model.margin[1]*100)+'%–'+fmt(x.model.margin[0]*100)+'%。12%及安全边际是研究者的资金要求与风险折价，非市场事实。高现金/稀释风险使用更大折价，但不能抵消证据缺失。</p>';
- if(p!==null&&x.model.type!=='fcf'){
+ if(p!==null&&x.model.type!=='fcf'&&x.model.type!=='index'){
  const label=x.model.type==='pb'?'BPS':x.model.type==='opat'?'营运EPS':'EPS';
  body+='<p>按本轮基准倍数，当前价格需要 '+label+' '+fmt((p-x.model.extra[1])/x.model.multiples[1],2)+' 元；本轮基准假设为 '+fmt(x.model.inputs[1],2)+' 元。这个反推只说明市场价格对应的盈利要求，不证明公司能实现。</p>';
  }

@@ -1,6 +1,6 @@
 window.RESEARCH = {
   "version": "3.0-review",
-  "asOf": "2026-10-15",
+  "asOf": "2026-10-18",
   "window": [
     "2027-01-15",
     "2027-04-15"
