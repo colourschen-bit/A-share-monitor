@@ -50,6 +50,30 @@ function formula(x,i){
  const label=m.type==='pb'?'BPS':m.type==='opat'?'营运EPS':'EPS';
  return label+' '+fmt(m.inputs[i],2)+'元 × '+fmt(m.multiples[i],2)+(m.extra[i]?' + '+m.extra[i]+'元期权':'');
 }
+function buyState(x){
+ const v=value(x),p=price(x);if(!v||p===null)return ['等待数据','pending'];
+ if(p<v.lo)return ['低于核心区，先排查风险','warn'];
+ if(p<=v.hi)return ['进入核心买入区','good'];
+ if(p<=v.ev)return ['合理但安全边际不足','hold'];
+ return ['等待价格','review'];
+}
+function renderPortfolio(){
+ const p=research.portfolio;if(!p||!$('idealGrid'))return;
+ const included=state.filter(x=>x.portfolio?.included).sort((a,b)=>a.portfolio.rank-b.portfolio.rank);
+ $('portfolioMeta').textContent=p.mode+' · 股票 '+p.equity+'% · 现金 '+p.cash+'% · '+included.length+'只核心标的';
+ $('idealGrid').innerHTML=included.map(x=>{
+  const v=value(x),bs=buyState(x),raw=x.quote?.price;
+  const fx=x.market==='HK'?research.hkdCny:1,unit=x.market==='HK'?'HKD':'CNY';
+  const nativeLo=v?v.lo/fx:null,nativeHi=v?v.hi/fx:null;
+  const extreme=v?fmt(nativeLo*.78)+'–'+fmt(nativeLo*.90)+' '+unit:'—';
+  return '<article class="portfolio-card"><div class="portfolio-top"><div><span class="rank">#'+x.portfolio.rank+'</span><strong>'+escapeHTML(x.name)+'</strong><span class="code">'+x.market+x.code+'</span></div><b class="weight">'+x.portfolio.weight+'%</b></div><div class="role">'+escapeHTML(x.portfolio.role)+'</div><div class="price-grid"><div><small>最新返回报价</small><b>'+fmt(raw,2)+' '+unit+'</b></div><div><small>高胜率核心区</small><b>'+(v?fmt(nativeLo)+'–'+fmt(nativeHi)+' '+unit:'—')+'</b></div><div><small>极端错杀区</small><b>'+extreme+'</b></div></div><span class="pill '+bs[1]+'">'+bs[0]+'</span><p>'+escapeHTML(x.portfolio.reason)+'</p><small>成立条件：'+escapeHTML(x.catalyst)+'</small></article>';
+ }).join('')+'<article class="portfolio-card cash-card"><div class="portfolio-top"><div><span class="rank">现金</span><strong>货币基金 / 现金</strong></div><b class="weight">'+p.cash+'%</b></div><div class="role">组合选择权</div><p>任何核心标的未进入条件买入区时，相应目标仓位继续留在现金，不由其他资产自动填满。</p><small>用于财报后错杀、系统性风险和分档建仓；不是闲置仓位。</small></article>';
+ const excluded=state.filter(x=>!x.portfolio?.included).sort((a,b)=>a.portfolio.rank-b.portfolio.rank);
+ $('excludedRows').innerHTML=excluded.map(x=>{
+  const v=value(x);return '<tr data-code="'+x.code+'"><td class="num">'+x.portfolio.rank+'</td><td><b>'+escapeHTML(x.name)+'</b><span class="code">'+x.market+x.code+'</span></td><td><span class="pill secondary">'+escapeHTML(x.portfolio.grade)+'</span></td><td>'+escapeHTML(x.portfolio.reason)+'</td><td class="num">'+(v?fmt(v.lo)+'–'+fmt(v.hi):'—')+'</td><td>'+escapeHTML(x.catalyst)+'</td></tr>';
+ }).join('');
+ $('portfolioMethod').textContent=p.method+' '+p.caveat;
+}
 function render(){
  const query=$('search').value.trim().toLowerCase(),filter=$('tier').value;
  const list=state.filter(x=>{
@@ -60,7 +84,7 @@ function render(){
  $('rows').innerHTML=list.map(x=>{
  const v=value(x),p=price(x),s=signal(x);
  const raw=x.quote?.price;
- return '<tr tabindex="0" data-code="'+x.code+'"><td><div class="name">'+escapeHTML(x.name)+'</div><span class="code">'+x.market+x.code+' · '+x.kind+'</span></td>'+
+ return '<tr tabindex="0" data-code="'+x.code+'"><td><div class="name">'+escapeHTML(x.name)+'</div><span class="code">'+x.market+x.code+' · '+x.kind+'</span></td><td><b>#'+x.portfolio.rank+'</b><span class="meta">'+escapeHTML(x.portfolio.grade)+'</span></td>'+
  '<td class="num">'+fmt(raw,x.kind==='ETF'?3:2)+(x.market==='HK'?' HKD':' CNY')+'<span class="meta">'+escapeHTML(x.quote?.time||'缺失')+'</span><span class="meta">'+escapeHTML(x.quoteOrigin)+'</span>'+(x.market==='HK'?'<span class="meta">≈ '+fmt(p,2)+' CNY</span>':'')+'</td>'+
  '<td><span class="pill '+s[1]+'">'+s[0]+'</span><span class="meta">'+escapeHTML(s[2])+'</span></td>'+
  '<td><span class="pill pending">'+escapeHTML(progress(x))+'</span><span class="meta">'+fulfillment(x)+'</span><span class="meta">'+escapeHTML(x.analysis?.verdict||'')+'</span></td>'+
@@ -71,6 +95,7 @@ function render(){
  }).join('');
  const drafts=state.filter(x=>x.model).length;
  $('stats').innerHTML=[['独立条件分析',state.filter(x=>x.analysis).length+'项'],['可复算价格情景',drafts+'项'],['定价模型缺失',state.length-drafts+'项'],['未来成立条件已核验',state.filter(x=>x.gate==='verified').length+'项'],['复核日期',research.asOf],['当前列表',list.length+'项']].map(a=>'<div class="stat"><small>'+a[0]+'</small><strong>'+a[1]+'</strong></div>').join('');
+ renderPortfolio();
 }
 function openDetail(x){
  const v=value(x),p=price(x);
@@ -128,6 +153,7 @@ function refresh(){
 $('macro').innerHTML=research.macro.map(m=>'<article><h3>'+escapeHTML(m.title)+'</h3><p>'+escapeHTML(m.fact)+'</p><p>'+escapeHTML(m.inference)+'</p><a class="small" href="'+escapeHTML(m.url)+'" target="_blank" rel="noopener">证据来源 ↗</a></article>').join('');
 $('rows').onclick=e=>{const tr=e.target.closest('tr');if(tr)openDetail(state.find(x=>x.code===tr.dataset.code));};
 $('rows').onkeydown=e=>{if(e.key==='Enter'){const tr=e.target.closest('tr');if(tr)openDetail(state.find(x=>x.code===tr.dataset.code));}};
+$('excludedRows').onclick=e=>{const tr=e.target.closest('tr');if(tr)openDetail(state.find(x=>x.code===tr.dataset.code));};
 $('closeBtn').onclick=()=>$('detail').close();
 $('search').oninput=render;$('tier').onchange=render;
 $('scenarioBtn').onclick=()=>{scenario=(scenario+1)%3;$('scenarioBtn').textContent='对照情景：'+scenarioNames[scenario];render();};
