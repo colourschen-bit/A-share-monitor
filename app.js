@@ -7,13 +7,16 @@ const $=id=>document.getElementById(id);
 const escapeHTML=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=(n,d=0)=>Number.isFinite(n)?n.toLocaleString('zh-CN',{minimumFractionDigits:d,maximumFractionDigits:d}):'—';
 const pct=n=>Number.isFinite(n)?(n>=0?'+':'')+(n*100).toFixed(0)+'%':'—';
+const digits=x=>x.kind==='ETF'?3:2;
 function cases(x){
  const m=x.model;if(!m)return null;
+ if(m.type==='lookthrough')return m.cases;
  if(m.type==='index')return m.fair.map((v,i)=>m.anchorNav*(v/m.currentMetric)*m.fundamental[i]);
  return m.inputs.map((v,i)=>m.type==='fcf'?v/m.yields[i]+m.extra[i]:v*m.multiples[i]+m.extra[i]);
 }
 function value(x){
  const v=cases(x);if(!v)return null;
+ if(x.model.type==='lookthrough')return {cases:v,ev:v[1],pv:v[1],lo:x.model.buyZone[0],hi:x.model.buyZone[1]};
  // Use the stated base case, not an unvalidated probability-weighted target.
  const ev=v[1];
  const pv=ev/Math.pow(1.12,.5);
@@ -45,6 +48,11 @@ function progress(x){return x.audit?.stage||(x.model?'已有草案，待完善�
 function fulfillment(x){return x.gate==='verified'?'成立条件已核验':x.gate==='failed'?'论点失效':'催化待观察';}
 function formula(x,i){
  const m=x.model;if(!m)return '未建立可追溯的当前模型';
+ if(m.type==='lookthrough'){
+  if(i===0)return 'ETF核心区下沿 '+fmt(m.buyZone[0],3)+' × 85% 压力折价';
+  if(i===1)return '核心区上沿 '+fmt(m.buyZone[1],3)+' ÷ 90%（反推保留10%安全边际的合理价值）';
+  return '锚定净值 '+fmt(m.anchorNav,4)+' × 修复系数 '+fmt(m.cases[2]/m.anchorNav,2);
+ }
  if(m.type==='index')return '锚定净值 '+fmt(m.anchorNav,4)+' × 合理'+m.metric+' '+fmt(m.fair[i],2)+' ÷ 当前'+m.metric+' '+fmt(m.currentMetric,2)+' × 基本面系数 '+fmt(m.fundamental[i],2);
  if(m.type==='fcf')return fmt(m.inputs[i],1)+'元FCFE ÷ '+fmt(m.yields[i]*100,1)+'% + '+m.extra[i]+'元投资折价值';
  const label=m.type==='pb'?'BPS':m.type==='opat'?'营运EPS':'EPS';
@@ -65,12 +73,12 @@ function renderPortfolio(){
   const v=value(x),bs=buyState(x),raw=x.quote?.price;
   const fx=x.market==='HK'?research.hkdCny:1,unit=x.market==='HK'?'HKD':'CNY';
   const nativeLo=v?v.lo/fx:null,nativeHi=v?v.hi/fx:null;
-  const extreme=v?fmt(nativeLo*.78)+'–'+fmt(nativeLo*.90)+' '+unit:'—';
-  return '<article class="portfolio-card"><div class="portfolio-top"><div><span class="rank">#'+x.portfolio.rank+'</span><strong>'+escapeHTML(x.name)+'</strong><span class="code">'+x.market+x.code+'</span></div><b class="weight">'+x.portfolio.weight+'%</b></div><div class="role">'+escapeHTML(x.portfolio.role)+'</div><div class="price-grid"><div><small>最新返回报价</small><b>'+fmt(raw,2)+' '+unit+'</b></div><div><small>高胜率核心区</small><b>'+(v?fmt(nativeLo)+'–'+fmt(nativeHi)+' '+unit:'—')+'</b></div><div><small>极端错杀区</small><b>'+extreme+'</b></div></div><span class="pill '+bs[1]+'">'+bs[0]+'</span><p>'+escapeHTML(x.portfolio.reason)+'</p><small>成立条件：'+escapeHTML(x.catalyst)+'</small></article>';
+  const d=digits(x),extreme=v?fmt(nativeLo*.78,d)+'–'+fmt(nativeLo*.90,d)+' '+unit:'—';
+  return '<article class="portfolio-card"><div class="portfolio-top"><div><span class="rank">#'+x.portfolio.rank+'</span><strong>'+escapeHTML(x.name)+'</strong><span class="code">'+x.market+x.code+'</span></div><b class="weight">'+x.portfolio.weight+'%</b></div><div class="role">'+escapeHTML(x.portfolio.role)+'</div><div class="price-grid"><div><small>最新返回报价</small><b>'+fmt(raw,d)+' '+unit+'</b></div><div><small>高胜率核心区</small><b>'+(v?fmt(nativeLo,d)+'–'+fmt(nativeHi,d)+' '+unit:'—')+'</b></div><div><small>极端错杀区</small><b>'+extreme+'</b></div></div><span class="pill '+bs[1]+'">'+bs[0]+'</span><p>'+escapeHTML(x.portfolio.reason)+'</p><small>成立条件：'+escapeHTML(x.catalyst)+'</small></article>';
  }).join('')+'<article class="portfolio-card cash-card"><div class="portfolio-top"><div><span class="rank">现金</span><strong>货币基金 / 现金</strong></div><b class="weight">'+p.cash+'%</b></div><div class="role">组合选择权</div><p>任何核心标的未进入条件买入区时，相应目标仓位继续留在现金，不由其他资产自动填满。</p><small>用于财报后错杀、系统性风险和分档建仓；不是闲置仓位。</small></article>';
  const excluded=state.filter(x=>!x.portfolio?.included).sort((a,b)=>a.portfolio.rank-b.portfolio.rank);
  $('excludedRows').innerHTML=excluded.map(x=>{
-  const v=value(x);return '<tr data-code="'+x.code+'"><td class="num">'+x.portfolio.rank+'</td><td><b>'+escapeHTML(x.name)+'</b><span class="code">'+x.market+x.code+'</span></td><td><span class="pill secondary">'+escapeHTML(x.portfolio.grade)+'</span></td><td>'+escapeHTML(x.portfolio.reason)+'</td><td class="num">'+(v?fmt(v.lo)+'–'+fmt(v.hi):'—')+'</td><td>'+escapeHTML(x.catalyst)+'</td></tr>';
+  const v=value(x),d=digits(x);return '<tr data-code="'+x.code+'"><td class="num">'+x.portfolio.rank+'</td><td><b>'+escapeHTML(x.name)+'</b><span class="code">'+x.market+x.code+'</span></td><td><span class="pill secondary">'+escapeHTML(x.portfolio.grade)+'</span></td><td>'+escapeHTML(x.portfolio.reason)+'</td><td class="num">'+(v?fmt(v.lo,d)+'–'+fmt(v.hi,d):'—')+'</td><td>'+escapeHTML(x.catalyst)+'</td></tr>';
  }).join('');
  $('portfolioMethod').textContent=p.method+' '+p.caveat;
 }
@@ -83,13 +91,13 @@ function render(){
  });
  $('rows').innerHTML=list.map(x=>{
  const v=value(x),p=price(x),s=signal(x);
- const raw=x.quote?.price;
+ const raw=x.quote?.price,d=digits(x);
  return '<tr tabindex="0" data-code="'+x.code+'"><td><div class="name">'+escapeHTML(x.name)+'</div><span class="code">'+x.market+x.code+' · '+x.kind+'</span></td><td><b>#'+x.portfolio.rank+'</b><span class="meta">'+escapeHTML(x.portfolio.grade)+'</span></td>'+
- '<td class="num">'+fmt(raw,x.kind==='ETF'?3:2)+(x.market==='HK'?' HKD':' CNY')+'<span class="meta">'+escapeHTML(x.quote?.time||'缺失')+'</span><span class="meta">'+escapeHTML(x.quoteOrigin)+'</span>'+(x.market==='HK'?'<span class="meta">≈ '+fmt(p,2)+' CNY</span>':'')+'</td>'+
+ '<td class="num">'+fmt(raw,d)+(x.market==='HK'?' HKD':' CNY')+'<span class="meta">'+escapeHTML(x.quote?.time||'缺失')+'</span><span class="meta">'+escapeHTML(x.quoteOrigin)+'</span>'+(x.market==='HK'?'<span class="meta">≈ '+fmt(p,2)+' CNY</span>':'')+'</td>'+
  '<td><span class="pill '+s[1]+'">'+s[0]+'</span><span class="meta">'+escapeHTML(s[2])+'</span></td>'+
  '<td><span class="pill pending">'+escapeHTML(progress(x))+'</span><span class="meta">'+fulfillment(x)+'</span><span class="meta">'+escapeHTML(x.analysis?.verdict||'')+'</span></td>'+
- '<td class="num">'+(v?fmt(v.cases[scenario]):'暂停')+'</td><td class="num">'+(v?fmt(v.ev):'暂停')+'</td>'+
- '<td class="num">'+(v?fmt(v.lo)+'–'+fmt(v.hi):'不沿用旧值')+'</td>'+
+ '<td class="num">'+(v?fmt(v.cases[scenario],d):'暂停')+'</td><td class="num">'+(v?fmt(v.ev,d):'暂停')+'</td>'+
+ '<td class="num">'+(v?fmt(v.lo,d)+'–'+fmt(v.hi,d):'不沿用旧值')+'</td>'+
  '<td class="num">'+(v&&p!==null?pct(v.cases[0]/p-1)+' / '+pct(v.cases[2]/p-1):'—')+'</td>'+
  '<td class="thesis">'+escapeHTML(x.catalyst)+'</td><td class="report factcell">'+escapeHTML(x.fact)+'<span class="meta">'+escapeHTML(x.verification)+'</span></td></tr>';
  }).join('');
@@ -99,6 +107,7 @@ function render(){
 }
 function openDetail(x){
  const v=value(x),p=price(x);
+ const d=digits(x);
  $('dCode').textContent=x.market+x.code+' · 3–6月评价窗口 · 全部估值为人民币';
  $('dName').textContent=x.name;
  let body='<div class="audit">价格判断：'+signal(x)[0]+'（'+escapeHTML(signal(x)[2])+'）；报价时间：'+escapeHTML(x.quote?.time||'缺失')+'；研究进度：'+escapeHTML(progress(x))+'；经营兑现：'+fulfillment(x)+'。研究完成与未来催化兑现是两回事。折价不自动等于买入，溢价不自动等于卖出。</div>';
@@ -113,11 +122,15 @@ function openDetail(x){
  body+='<section class="section"><h3>估值方法及参数依据</h3><p>'+escapeHTML(n.basis)+'</p></section>';
  body+='<section class="section"><h3>反身性 / 重叠风险</h3><p>'+escapeHTML(n.reflexivity||n.overlap)+'</p></section>';
  }
+ if(x.model?.type==='lookthrough'){
+ const m=x.model;
+ body+='<section class="section"><h3>前五大持仓穿透 · '+escapeHTML(m.holdingsDate)+'披露</h3><div class="lookthrough-summary"><span class="pill core">覆盖 '+fmt(m.coverage,2)+'%</span><span class="pill secondary">模型置信度 '+escapeHTML(m.confidence)+'</span><span class="pill secondary">锚定净值 '+fmt(m.anchorNav,4)+'</span></div><div class="table-wrap lookthrough-table"><table><thead><tr><th>成分股</th><th class="num">权重</th><th>现金质量</th><th>赔率</th><th class="num">核心估值水平*</th><th>独立依据</th></tr></thead><tbody>'+m.top5.map(h=>'<tr><td><b>'+escapeHTML(h.name)+'</b><span class="code">'+escapeHTML(h.code)+'</span></td><td class="num">'+fmt(h.weight,2)+'%</td><td>'+escapeHTML(h.quality)+'</td><td>'+escapeHTML(h.odds)+'</td><td class="num">'+fmt(h.band[0]*100,0)+'%–'+fmt(h.band[1]*100,0)+'%</td><td>'+escapeHTML(h.basis)+'</td></tr>').join('')+'</tbody></table></div><p class="small">*“核心估值水平”表示相对复核日成分价格/估值水平的比例，不是统计胜率。'+escapeHTML(m.residualNote)+' 加权公式：Σ(持仓权重×成分核心估值水平)＋剩余权重×剩余篮子水平。</p></section>';
+ }
  if(v){
- body+='<section class="section"><h3>可复算情景：参数均为研究假设</h3><div class="grid">'+scenarioNames.map((n,i)=>'<div class="card inputs"><small>'+n+' · '+(i===1?'定价参照':'敏感性边界')+'</small><strong>'+fmt(v.cases[i],2)+'元</strong><p class="small">'+escapeHTML(formula(x,i))+'</p><p class="small">情景价格收益 '+(p===null?'缺行情':pct(v.cases[i]/p-1))+'</p></div>').join('')+'</div><p class="small">个股EPS/BPS为未来12个月或正常化盈利水平参照；ETF由锚定净值、指数估值和基本面系数推导。3–6个月是催化评价窗口，不保证该窗口实现全年利润。三种情景不分配未经验证的概率，不计算虚假统计胜率。</p></section>';
+ body+='<section class="section"><h3>可复算情景：参数均为研究假设</h3><div class="grid">'+scenarioNames.map((n,i)=>'<div class="card inputs"><small>'+n+' · '+(i===1?'定价参照':'敏感性边界')+'</small><strong>'+fmt(v.cases[i],d)+'元</strong><p class="small">'+escapeHTML(formula(x,i))+'</p><p class="small">情景价格收益 '+(p===null?'缺行情':pct(v.cases[i]/p-1))+'</p></div>').join('')+'</div><p class="small">个股EPS/BPS为未来12个月或正常化盈利水平参照；ETF使用前五大披露持仓穿透＋剩余篮子折价。3–6个月是催化评价窗口。三种情景不分配未经验证的概率，不计算虚假统计胜率。</p></section>';
  if(x.model.evidenceUrl)body+='<p class="small"><a href="'+escapeHTML(x.model.evidenceUrl)+'" target="_blank" rel="noopener">估值锚数据来源 ↗</a> · '+escapeHTML(x.model.reference||'')+'</p>';
- body+='<section class="section"><h3>条件关注区与反向核验</h3><p class="small">基准估值 '+fmt(v.ev,2)+'；按12%年化、半年折现后的值 '+fmt(v.pv,2)+'；额外安全边际 '+fmt(x.model.margin[1]*100)+'%–'+fmt(x.model.margin[0]*100)+'%。12%及安全边际是研究者的资金要求与风险折价，非市场事实。高现金/稀释风险使用更大折价，但不能抵消证据缺失。</p>';
- if(p!==null&&x.model.type!=='fcf'&&x.model.type!=='index'){
+ body+='<section class="section"><h3>条件关注区与反向核验</h3><p class="small">基准估值 '+fmt(v.ev,d)+'；'+(x.model.type==='lookthrough'?'持仓穿透核心区 '+fmt(v.lo,d)+'–'+fmt(v.hi,d)+'，安全边际已经逐项计入，不再二次折现。':'按12%年化、半年折现后的值 '+fmt(v.pv,2)+'；额外安全边际 '+fmt(x.model.margin[1]*100)+'%–'+fmt(x.model.margin[0]*100)+'%。12%及安全边际是研究者的资金要求与风险折价，非市场事实。高现金/稀释风险使用更大折价，但不能抵消证据缺失。')+'</p>';
+ if(p!==null&&x.model.type!=='fcf'&&x.model.type!=='index'&&x.model.type!=='lookthrough'){
  const label=x.model.type==='pb'?'BPS':x.model.type==='opat'?'营运EPS':'EPS';
  body+='<p>按本轮基准倍数，当前价格需要 '+label+' '+fmt((p-x.model.extra[1])/x.model.multiples[1],2)+' 元；本轮基准假设为 '+fmt(x.model.inputs[1],2)+' 元。这个反推只说明市场价格对应的盈利要求，不证明公司能实现。</p>';
  }
