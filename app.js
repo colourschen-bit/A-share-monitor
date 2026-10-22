@@ -19,7 +19,7 @@ function value(x){
  if(x.model.type==='lookthrough')return {cases:v,ev:v[1],pv:v[1],lo:x.model.buyZone[0],hi:x.model.buyZone[1]};
  // Use the stated base case, not an unvalidated probability-weighted target.
  const ev=v[1];
- const pv=ev/Math.pow(1.12,.5);
+ const pv=ev/Math.pow(1.12,x.model.discountYears??.5);
  return {cases:v,ev,pv,lo:pv*(1-x.model.margin[0]),hi:pv*(1-x.model.margin[1])};
 }
 function price(x){return Number.isFinite(x.quote?.price)&&x.quote.price>0?x.quote.price*(x.market==='HK'?research.hkdCny:1):null;}
@@ -60,6 +60,7 @@ function formula(x,i){
 }
 function buyState(x){
  const s=signal(x);if(s[0]==='暂不估值')return [s[2],'pending'];
+ if(x.validation?.priceGrade==='原买价依据偏弱')return ['原买价依据偏弱，先补现金证据','pending'];
  const v=value(x),p=price(x);
  if(p<v.lo)return ['低于核心区，先排查风险','warn'];
  if(p<=v.hi)return x.gate==='verified'?['价格与条件均达标','good']:['价格达区，条件待核验','watch'];
@@ -75,7 +76,7 @@ function renderPortfolio(){
   const fx=x.market==='HK'?research.hkdCny:1,unit=x.market==='HK'?'HKD':'CNY';
   const nativeLo=v?v.lo/fx:null,nativeHi=v?v.hi/fx:null;
   const d=digits(x),stress=v?fmt(v.cases[0]/fx,d)+' '+unit:'—';
-  return '<article tabindex="0" data-code="'+x.code+'" class="portfolio-card"><div class="portfolio-top"><div><span class="rank">#'+x.portfolio.rank+'</span><strong>'+escapeHTML(x.name)+'</strong><span class="code">'+x.market+x.code+' · '+escapeHTML(x.origin||'原研究池')+'</span></div><b class="weight">'+x.portfolio.weight+'%</b></div><div class="role">'+escapeHTML(x.portfolio.role)+'</div><div class="price-grid"><div><small>报价 '+escapeHTML(quoteDate(x.quote)||'缺失')+'</small><b>'+fmt(raw,d)+' '+unit+'</b></div><div><small>条件建仓区</small><b>'+(v?fmt(nativeLo,d)+'–'+fmt(nativeHi,d)+' '+unit:'—')+'</b></div><div><small>压力情景（非底价）</small><b>'+stress+'</b></div></div><span class="pill '+bs[1]+'">'+escapeHTML(bs[0])+'</span><p>'+escapeHTML(x.portfolio.reason)+'</p><small>成立条件：'+escapeHTML(x.catalyst)+'</small><span class="meta">'+escapeHTML(x.quoteOrigin)+' · 点击查看证据与公式</span></article>';
+  return '<article tabindex="0" data-code="'+x.code+'" class="portfolio-card"><div class="portfolio-top"><div><span class="rank">#'+x.portfolio.rank+'</span><strong>'+escapeHTML(x.name)+'</strong><span class="code">'+x.market+x.code+' · '+escapeHTML(x.origin||'原研究池')+'</span></div><b class="weight">'+x.portfolio.weight+'%</b></div><div class="role">'+escapeHTML(x.validation?x.validation.category+' · '+x.validation.priceGrade:x.portfolio.role)+'</div><div class="price-grid"><div><small>报价 '+escapeHTML(quoteDate(x.quote)||'缺失')+'</small><b>'+fmt(raw,d)+' '+unit+'</b></div><div><small>盈利/净资产条件区*</small><b>'+(v?fmt(nativeLo,d)+'–'+fmt(nativeHi,d)+' '+unit:'—')+'</b></div><div><small>压力情景（非底价）</small><b>'+stress+'</b></div></div><span class="pill '+bs[1]+'">'+escapeHTML(bs[0])+'</span><p>'+escapeHTML(x.validation?.summary||x.portfolio.reason)+'</p><small>成立条件：'+escapeHTML(x.catalyst)+'</small><span class="meta">'+escapeHTML(x.quoteOrigin)+' · *条件区不代表已通过现金回报核验，点击看详情</span></article>';
  }).join('')+'<article class="portfolio-card cash-card"><div class="portfolio-top"><div><span class="rank">现金</span><strong>货币基金 / 现金</strong></div><b class="weight">'+p.cash+'%</b></div><div class="role">组合选择权</div><p>任何核心标的未进入条件买入区时，相应目标仓位继续留在现金，不由其他资产自动填满。</p><small>用于财报后错杀、系统性风险和分档建仓；不是闲置仓位。</small></article>';
  const excluded=state.filter(x=>!x.portfolio?.included).sort((a,b)=>a.portfolio.rank-b.portfolio.rank);
  $('excludedRows').innerHTML=excluded.map(x=>{
@@ -84,13 +85,25 @@ function renderPortfolio(){
  $('portfolioMethod').textContent=p.method+' '+p.caveat+' '+p.execution+' '+p.changes;
  const buckets={};included.forEach(x=>{buckets[x.portfolio.bucket]=(buckets[x.portfolio.bucket]||0)+x.portfolio.weight;});
  $('riskFactors').innerHTML=Object.entries(buckets).map(([k,v])=>'<span class="pill secondary">'+escapeHTML(k)+' '+v+'%</span>').join(' ')+'<p class="small">按主要盈利驱动归类，不是实测相关系数。金融13%、电网16%、数字需求17%仍有共同风险；消费与出口、利率与信用也可能一起受压。海油和快递的油价敏感性仅提供部分缓冲。</p>';
+ renderCoreValidation();
+}
+function renderCoreValidation(){
+ const a=research.coreValidation;if(!a||!$('validationRows'))return;
+ $('validationIntro').textContent=a.headline+' '+a.correction+' '+a.portfolio;
+ $('validationMethod').textContent=a.method+' '+a.limits;
+ $('validationRows').innerHTML=state.filter(x=>x.validation).map(x=>{
+  const z=x.validation,v=value(x),fx=x.market==='HK'?research.hkdCny:1,unit=x.market==='HK'?'HKD':'CNY';
+  const band=b=>b.map(n=>fmt(n/fx,2)).join('–')+' '+unit;
+  const cls=z.priceGrade==='价格依据初步支持'?'hold':z.priceGrade==='需要额外条件'?'watch':'bad';
+  return '<tr data-code="'+x.code+'"><td><b>'+escapeHTML(x.name)+'</b><span class="code">'+x.code+' · '+z.category+'</span></td><td class="num">'+band(z.old.zone)+'</td><td class="num">'+band([v.lo,v.hi])+'</td><td><span class="pill '+cls+'">'+z.priceGrade+'</span></td><td>'+escapeHTML(z.finding)+'</td><td class="num">'+(z.cashZone?band(z.cashZone):'用PB/持续ROE检验')+'</td></tr>';
+ }).join('');
 }
 function render(){
  const query=$('search').value.trim().toLowerCase(),filter=$('tier').value;
  const list=state.filter(x=>{
  const v=value(x),p=price(x);
  return [x.name,x.code,x.catalyst,x.risk,x.analysis?.verdict].join(' ').toLowerCase().includes(query)&&
- (filter==='all'||filter==='core'&&x.tier==='core'||filter==='draft'&&x.model||filter==='pending'&&(!x.model||x.model.type==='lookthrough')||filter==='zone'&&signal(x)[0]==='有折价');
+ (filter==='all'||filter==='core'&&x.tier==='core'||filter==='draft'&&x.model||filter==='pending'&&(!x.model||x.model.type==='lookthrough'||x.validation?.priceGrade==='原买价依据偏弱')||filter==='zone'&&signal(x)[0]==='有折价');
  });
  $('rows').innerHTML=list.map(x=>{
  const v=value(x),p=price(x),s=signal(x);
@@ -105,7 +118,7 @@ function render(){
  '<td class="thesis">'+escapeHTML(x.catalyst)+'</td><td class="report factcell">'+escapeHTML(x.fact)+'<span class="meta">'+escapeHTML(x.verification)+'</span></td></tr>';
  }).join('');
  const drafts=state.filter(x=>x.model).length;
- $('stats').innerHTML=[['经营框架已记录',state.filter(x=>x.analysis).length+'项'],['可复算条件情景',drafts+'项'],['ETF绝对价锚待补',state.filter(x=>x.kind==='ETF').length+'项'],['未来成立条件已核验',state.filter(x=>x.gate==='verified').length+'项'],['复核日期',research.asOf],['当前列表',list.length+'项']].map(a=>'<div class="stat"><small>'+a[0]+'</small><strong>'+a[1]+'</strong></div>').join('');
+ $('stats').innerHTML=[['经营框架已记录',state.filter(x=>x.analysis).length+'项'],['可复算条件情景',drafts+'项'],['核心价格初步支持',research.coreValidation.supported+'/15项'],['未来成立条件已核验',state.filter(x=>x.gate==='verified').length+'项'],['复核日期',research.asOf],['当前列表',list.length+'项']].map(a=>'<div class="stat"><small>'+a[0]+'</small><strong>'+a[1]+'</strong></div>').join('');
  renderPortfolio();
 }
 function openDetail(x){
@@ -114,6 +127,12 @@ function openDetail(x){
  $('dCode').textContent=x.market+x.code+' · 3–6月评价窗口 · 全部估值为人民币';
  $('dName').textContent=x.name;
  let body='<div class="audit">价格判断：'+signal(x)[0]+'（'+escapeHTML(signal(x)[2])+'）；报价时间：'+escapeHTML(x.quote?.time||'缺失')+'；研究进度：'+escapeHTML(progress(x))+'；经营兑现：'+fulfillment(x)+'。研究完成与未来催化兑现是两回事。折价不自动等于买入，溢价不自动等于卖出。</div>';
+ if(x.validation){const z=x.validation,fx=x.market==='HK'?research.hkdCny:1;
+  body+='<section class="section"><h3>2026-10-23 核验：'+escapeHTML(z.priceGrade)+'</h3><p>'+escapeHTML(z.finding)+'</p><p>财报锚点：'+escapeHTML(z.anchor)+'</p><p>未来假设：'+escapeHTML(z.hypothesis)+'</p><p>反证：'+escapeHTML(z.falsifier)+'</p>';
+  if(z.cross)body+='<p>前5年归母可分配现金/股（CNY）：'+z.cash.map(n=>fmt(n,2)).join(' → ')+'；第6–10年：'+z.cross.flows.slice(5).map(n=>fmt(n,2)).join(' → ')+'。</p><p>资金要求 '+fmt(z.rate*100)+'%、终值增长 '+fmt(z.terminal*100)+'%；现金现值 '+fmt(z.cross.pv/fx,2)+(x.market==='HK'?' HKD':' CNY')+'，其中终值占 '+fmt(z.cross.terminalShare*100)+'%。仅改资金要求±2个百分点，现值约为 '+z.sensitivity.map(n=>fmt(n/fx,2)).join('–')+'。</p><p>现金假设参照区（现值再留10%–20%余量）：'+z.cashZone.map(n=>fmt(n/fx,2)).join('–')+(x.market==='HK'?' HKD':' CNY')+'。这不是一组新的高胜率买单；完整净现金/投资资产与资本支出桥接尚可能改变结果。</p>';
+  if(z.cross&&v)body+='<p>按同一资金成本、终值和形状，盈利模型条件区需要整条现金路径达到上述假设的 '+fmt(v.lo/z.cross.pv,2)+'–'+fmt(v.hi/z.cross.pv,2)+' 倍；这是反向条件，不是盈利增长率或胜率。</p>';
+  body+='<p class="small">'+escapeHTML(research.coreValidation.limits)+'</p></section>';
+ }
  const a=x.audit;
  body+='<section class="section"><h3>研究完成度与下一步</h3><p>已完成：'+escapeHTML(a?.done||(x.model?'财报锚点整理、情景计算链、催化与风险框架。':'标的识别及催化、风险框架。'))+'</p><p>仍缺：'+escapeHTML(a?.missing||(x.model?'从财报到未来盈利的分项推导、估值倍数及情景权重依据；草案尚非完整估值。':'当期成分权重、成分盈利/现金流及同日净值，尚不能给出可靠的绝对价区。'))+'</p><p>下一核验：'+escapeHTML(a?.next||x.catalyst)+'</p>'+(a?'<p class="small">补研日期：'+escapeHTML(a.date)+'；'+escapeHTML(a.conclusion)+'</p>':'')+'</section>';
  body+='<section class="section"><h3>已核对事实 / 数据边界</h3><p>'+escapeHTML(x.fact)+'</p><p class="small"><a href="'+escapeHTML(x.source)+'" target="_blank" rel="noopener">来源 / 待核验入口 ↗</a></p></section>';
@@ -134,7 +153,7 @@ function openDetail(x){
  if(v){
   body+='<section class="section"><h3>可复算情景：参数均为研究假设</h3><div class="grid">'+scenarioNames.map((n,i)=>'<div class="card inputs"><small>'+n+' · '+(i===1?'定价参照':'敏感性边界')+'</small><strong>'+fmt(v.cases[i],d)+'元</strong><p class="small">'+escapeHTML(formula(x,i))+'</p><p class="small">情景价格收益 '+(p===null?'缺行情':pct(v.cases[i]/p-1))+'</p></div>').join('')+'</div><p class="small">个股EPS/BPS为未来12个月或正常化盈利水平参照；ETF使用前十大披露持仓穿透＋剩余篮子折价。3–6个月是催化评价窗口。三种情景不分配未经验证的概率，不计算虚假统计胜率。</p></section>';
  if(x.model.evidenceUrl)body+='<p class="small"><a href="'+escapeHTML(x.model.evidenceUrl)+'" target="_blank" rel="noopener">估值锚数据来源 ↗</a> · '+escapeHTML(x.model.reference||'')+'</p>';
- body+='<section class="section"><h3>条件关注区与反向核验</h3><p class="small">基准估值 '+fmt(v.ev,d)+'；'+(x.model.type==='lookthrough'?'持仓穿透核心区 '+fmt(v.lo,d)+'–'+fmt(v.hi,d)+'，安全边际已经逐项计入，不再二次折现。':'按12%年化、半年折现后的值 '+fmt(v.pv,2)+'；额外安全边际 '+fmt(x.model.margin[1]*100)+'%–'+fmt(x.model.margin[0]*100)+'%。12%及安全边际是研究者的资金要求与风险折价，非市场事实。高现金/稀释风险使用更大折价，但不能抵消证据缺失。')+'</p>';
+ body+='<section class="section"><h3>条件关注区与反向核验</h3><p class="small">基准估值 '+fmt(v.ev,d)+'；'+(x.model.type==='lookthrough'?'持仓穿透核心区 '+fmt(v.lo,d)+'–'+fmt(v.hi,d)+'，安全边际已经逐项计入，不再二次折现。':(x.model.discountYears===0?'PB模型已经是现值，不再做半年折现；':'将假设估值按12%、半年折现，现值 '+fmt(v.pv,2)+'；该步骤不保证实际年化收益。')+'额外安全边际 '+fmt(x.model.margin[1]*100)+'%–'+fmt(x.model.margin[0]*100)+'%；条件区 '+fmt(v.lo,d)+'–'+fmt(v.hi,d)+' CNY。以上折价不能替代现金回报、再投资或资产归属核验。')+'</p>';
  if(p!==null&&x.model.type!=='fcf'&&x.model.type!=='index'&&x.model.type!=='lookthrough'){
  const label=x.model.type==='pb'?'BPS':x.model.type==='opat'?'营运EPS':'EPS';
  body+='<p>按本轮基准倍数，当前价格需要 '+label+' '+fmt((p-x.model.extra[1])/x.model.multiples[1],2)+' 元；本轮基准假设为 '+fmt(x.model.inputs[1],2)+' 元。这个反推只说明市场价格对应的盈利要求，不证明公司能实现。</p>';
@@ -172,6 +191,7 @@ $('macro').innerHTML=research.macro.map(m=>'<article><h3>'+escapeHTML(m.title)+'
 $('rows').onclick=e=>{const tr=e.target.closest('tr');if(tr)openDetail(state.find(x=>x.code===tr.dataset.code));};
 $('rows').onkeydown=e=>{if(e.key==='Enter'){const tr=e.target.closest('tr');if(tr)openDetail(state.find(x=>x.code===tr.dataset.code));}};
 $('excludedRows').onclick=e=>{const tr=e.target.closest('tr');if(tr)openDetail(state.find(x=>x.code===tr.dataset.code));};
+$('validationRows').onclick=e=>{const tr=e.target.closest('tr');if(tr)openDetail(state.find(x=>x.code===tr.dataset.code));};
 $('idealGrid').onclick=e=>{const card=e.target.closest('[data-code]');if(card)openDetail(state.find(x=>x.code===card.dataset.code));};
 $('idealGrid').onkeydown=e=>{if(e.key==='Enter')$('idealGrid').onclick(e);};
 $('reviewScope').textContent=research.auditReview.scope;

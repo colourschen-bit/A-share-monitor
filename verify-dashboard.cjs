@@ -1,7 +1,7 @@
 // Deterministic checks for allocation, valuation and misleading trade signals.
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const ctx={window:{},console,Intl,Date};vm.createContext(ctx);
-const layers=['review-data.js','research-audit.js','independent-research.js','new-assets.js','etf-lookthrough.js','opportunity-expansion.js','audit-updates.js','portfolio-data.js'];
+const layers=['review-data.js','research-audit.js','independent-research.js','new-assets.js','etf-lookthrough.js','opportunity-expansion.js','audit-updates.js','portfolio-data.js','core-validation.js'];
 for(const f of layers)vm.runInContext(fs.readFileSync(f,'utf8'),ctx,{filename:f});
 vm.runInContext(fs.readFileSync('app.js','utf8').split("$('macro').innerHTML")[0],ctx);
 const check=code=>vm.runInContext(code,ctx),r=ctx.window.RESEARCH;
@@ -32,6 +32,17 @@ assert.match(check(`(()=>{const previous=research.window[1];research.window[1]='
 assert.ok(Math.abs(check(`value(state.find(x=>x.code==='01193')).ev/research.hkdCny`)-20.9)<1e-10);
 assert.deepEqual(Array.from(r.assets.find(x=>x.code==='603444').model.inputs),[22,26.5,30]);
 assert.ok(!core.some(x=>['001280','603993'].includes(x.code)));
+assert.equal(core.filter(x=>x.validation?.priceGrade==='价格依据初步支持').length,4);
+assert.equal(core.filter(x=>x.validation?.priceGrade==='需要额外条件').length,5);
+assert.equal(core.filter(x=>x.validation?.priceGrade==='原买价依据偏弱').length,6);
+assert.equal(r.assets.find(x=>x.code==='605499').model.inputs[1],7.3);
+assert.ok(Math.abs(check(`value(state.find(x=>x.code==='600036')).pv`)-45.4*.9)<1e-9);
+assert.ok(Math.abs(r.assets.find(x=>x.code==='02328').model.inputs[1]-(303688000000/22242765303-.34))<1e-9);
+for(const x of core.filter(x=>x.validation.cross)){
+ assert.equal(x.validation.cross.flows.length,10);
+ assert.ok(x.validation.sensitivity[0]<x.validation.cross.pv&&x.validation.sensitivity[1]>x.validation.cross.pv);
+ assert.ok(x.validation.cross.terminalShare>0&&x.validation.cross.terminalShare<1);
+}
 // Execute the complete page bootstrap and every detail renderer against DOM stubs.
 const nodes={};for(const match of fs.readFileSync('index.html','utf8').matchAll(/id="([^"]+)"/g))nodes[match[1]]={value:'',innerHTML:'',textContent:'',options:[{},{},{}],showModal(){},close(){},remove(){}};
 nodes.tier.value='all';
@@ -40,6 +51,7 @@ vm.createContext(domCtx);for(const f of [...layers,'app.js'])vm.runInContext(fs.
 assert.equal((nodes.idealGrid.innerHTML.match(/data-code=/g)||[]).length,15);
 assert.equal((nodes.excludedRows.innerHTML.match(/<tr /g)||[]).length,37);
 assert.equal((nodes.rows.innerHTML.match(/<tr /g)||[]).length,52);
+assert.equal((nodes.validationRows.innerHTML.match(/<tr /g)||[]).length,15);
 vm.runInContext('for(const x of state)openDetail(x)',domCtx);
 assert.ok(!nodes.idealGrid.innerHTML.includes('极端错杀区'));
 console.log('PASS: 52 unique assets, 15 core, 85% equity + 15% cash, 10 ETF order/coverage checks, all price models, HKD conversion and 5 signal guards.');
