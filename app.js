@@ -2,7 +2,7 @@
 const research=window.RESEARCH;
 let scenario=1;
 const scenarioNames=['压力','基准','修复'];
-let state=research.assets.map(x=>({...x,quote:x.snapshot,quoteOrigin:(quoteDate(x.snapshot)||'既有')+'历史快照'}));
+let state=research.assets.map(x=>({...x,quote:x.snapshot,quoteOrigin:x.snapshot?(quoteDate(x.snapshot)||'既有')+'历史快照':'尚无有效报价'})).sort((a,b)=>a.portfolio.rank-b.portfolio.rank);
 const $=id=>document.getElementById(id);
 const escapeHTML=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=(n,d=0)=>Number.isFinite(n)?n.toLocaleString('zh-CN',{minimumFractionDigits:d,maximumFractionDigits:d}):'—';
@@ -50,7 +50,7 @@ function formula(x,i){
  const m=x.model;if(!m)return '未建立可追溯的当前模型';
  if(m.type==='lookthrough'){
   if(i===0)return 'ETF核心区下沿 '+fmt(m.buyZone[0],3)+' × 85% 压力折价';
-  if(i===1)return '核心区上沿 '+fmt(m.buyZone[1],3)+' ÷ 90%（反推保留10%安全边际的合理价值）';
+  if(i===1)return '核心区上沿 '+fmt(m.buyZone[1],3)+' ÷ 90%（同一假设反推的参照，非独立公允价值）';
   return '固定复核净值 '+fmt(m.anchorNav,4)+' × 修复系数 '+fmt(m.cases[2]/m.anchorNav,2);
  }
  if(m.type==='index')return '锚定净值 '+fmt(m.anchorNav,4)+' × 合理'+m.metric+' '+fmt(m.fair[i],2)+' ÷ 当前'+m.metric+' '+fmt(m.currentMetric,2)+' × 基本面系数 '+fmt(m.fundamental[i],2);
@@ -59,9 +59,10 @@ function formula(x,i){
  return label+' '+fmt(m.inputs[i],2)+'元 × '+fmt(m.multiples[i],2)+(m.extra[i]?' + '+m.extra[i]+'元期权':'');
 }
 function buyState(x){
- const v=value(x),p=price(x);if(!v||p===null)return ['等待数据','pending'];
+ const s=signal(x);if(s[0]==='暂不估值')return [s[2],'pending'];
+ const v=value(x),p=price(x);
  if(p<v.lo)return ['低于核心区，先排查风险','warn'];
- if(p<=v.hi)return ['进入核心买入区','good'];
+ if(p<=v.hi)return x.gate==='verified'?['价格与条件均达标','good']:['价格达区，条件待核验','watch'];
  if(p<=v.ev)return ['合理但安全边际不足','hold'];
  return ['等待价格','review'];
 }
@@ -73,21 +74,23 @@ function renderPortfolio(){
   const v=value(x),bs=buyState(x),raw=x.quote?.price;
   const fx=x.market==='HK'?research.hkdCny:1,unit=x.market==='HK'?'HKD':'CNY';
   const nativeLo=v?v.lo/fx:null,nativeHi=v?v.hi/fx:null;
-  const d=digits(x),extreme=v?fmt(nativeLo*.78,d)+'–'+fmt(nativeLo*.90,d)+' '+unit:'—';
-  return '<article class="portfolio-card"><div class="portfolio-top"><div><span class="rank">#'+x.portfolio.rank+'</span><strong>'+escapeHTML(x.name)+'</strong><span class="code">'+x.market+x.code+'</span></div><b class="weight">'+x.portfolio.weight+'%</b></div><div class="role">'+escapeHTML(x.portfolio.role)+'</div><div class="price-grid"><div><small>最新返回报价</small><b>'+fmt(raw,d)+' '+unit+'</b></div><div><small>高胜率核心区</small><b>'+(v?fmt(nativeLo,d)+'–'+fmt(nativeHi,d)+' '+unit:'—')+'</b></div><div><small>极端错杀区</small><b>'+extreme+'</b></div></div><span class="pill '+bs[1]+'">'+bs[0]+'</span><p>'+escapeHTML(x.portfolio.reason)+'</p><small>成立条件：'+escapeHTML(x.catalyst)+'</small></article>';
+  const d=digits(x),stress=v?fmt(v.cases[0]/fx,d)+' '+unit:'—';
+  return '<article tabindex="0" data-code="'+x.code+'" class="portfolio-card"><div class="portfolio-top"><div><span class="rank">#'+x.portfolio.rank+'</span><strong>'+escapeHTML(x.name)+'</strong><span class="code">'+x.market+x.code+' · '+escapeHTML(x.origin||'原研究池')+'</span></div><b class="weight">'+x.portfolio.weight+'%</b></div><div class="role">'+escapeHTML(x.portfolio.role)+'</div><div class="price-grid"><div><small>报价 '+escapeHTML(quoteDate(x.quote)||'缺失')+'</small><b>'+fmt(raw,d)+' '+unit+'</b></div><div><small>条件建仓区</small><b>'+(v?fmt(nativeLo,d)+'–'+fmt(nativeHi,d)+' '+unit:'—')+'</b></div><div><small>压力情景（非底价）</small><b>'+stress+'</b></div></div><span class="pill '+bs[1]+'">'+escapeHTML(bs[0])+'</span><p>'+escapeHTML(x.portfolio.reason)+'</p><small>成立条件：'+escapeHTML(x.catalyst)+'</small><span class="meta">'+escapeHTML(x.quoteOrigin)+' · 点击查看证据与公式</span></article>';
  }).join('')+'<article class="portfolio-card cash-card"><div class="portfolio-top"><div><span class="rank">现金</span><strong>货币基金 / 现金</strong></div><b class="weight">'+p.cash+'%</b></div><div class="role">组合选择权</div><p>任何核心标的未进入条件买入区时，相应目标仓位继续留在现金，不由其他资产自动填满。</p><small>用于财报后错杀、系统性风险和分档建仓；不是闲置仓位。</small></article>';
  const excluded=state.filter(x=>!x.portfolio?.included).sort((a,b)=>a.portfolio.rank-b.portfolio.rank);
  $('excludedRows').innerHTML=excluded.map(x=>{
-  const v=value(x),d=digits(x);return '<tr data-code="'+x.code+'"><td class="num">'+x.portfolio.rank+'</td><td><b>'+escapeHTML(x.name)+'</b><span class="code">'+x.market+x.code+'</span></td><td><span class="pill secondary">'+escapeHTML(x.portfolio.grade)+'</span></td><td>'+escapeHTML(x.portfolio.reason)+'</td><td class="num">'+(v?fmt(v.lo,d)+'–'+fmt(v.hi,d):'—')+'</td><td>'+escapeHTML(x.catalyst)+'</td></tr>';
+  const v=value(x),d=digits(x),fx=x.market==='HK'?research.hkdCny:1;return '<tr data-code="'+x.code+'"><td class="num">'+x.portfolio.rank+'</td><td><b>'+escapeHTML(x.name)+'</b><span class="code">'+x.market+x.code+'</span></td><td><span class="pill secondary">'+escapeHTML(x.portfolio.grade)+'</span></td><td>'+escapeHTML(x.portfolio.reason)+'</td><td class="num">'+(v?fmt(v.lo/fx,d)+'–'+fmt(v.hi/fx,d)+(x.market==='HK'?' HKD':' CNY'):'—')+'</td><td>'+escapeHTML(x.catalyst)+'</td></tr>';
  }).join('');
- $('portfolioMethod').textContent=p.method+' '+p.caveat;
+ $('portfolioMethod').textContent=p.method+' '+p.caveat+' '+p.execution+' '+p.changes;
+ const buckets={};included.forEach(x=>{buckets[x.portfolio.bucket]=(buckets[x.portfolio.bucket]||0)+x.portfolio.weight;});
+ $('riskFactors').innerHTML=Object.entries(buckets).map(([k,v])=>'<span class="pill secondary">'+escapeHTML(k)+' '+v+'%</span>').join(' ')+'<p class="small">按主要盈利驱动归类，不是实测相关系数。金融13%、电网16%、数字需求17%仍有共同风险；消费与出口、利率与信用也可能一起受压。海油和快递的油价敏感性仅提供部分缓冲。</p>';
 }
 function render(){
  const query=$('search').value.trim().toLowerCase(),filter=$('tier').value;
  const list=state.filter(x=>{
  const v=value(x),p=price(x);
  return [x.name,x.code,x.catalyst,x.risk,x.analysis?.verdict].join(' ').toLowerCase().includes(query)&&
- (filter==='all'||filter==='core'&&x.tier==='core'||filter==='draft'&&x.model||filter==='pending'&&!x.model||filter==='zone'&&signal(x)[0]==='有折价');
+ (filter==='all'||filter==='core'&&x.tier==='core'||filter==='draft'&&x.model||filter==='pending'&&(!x.model||x.model.type==='lookthrough')||filter==='zone'&&signal(x)[0]==='有折价');
  });
  $('rows').innerHTML=list.map(x=>{
  const v=value(x),p=price(x),s=signal(x);
@@ -102,7 +105,7 @@ function render(){
  '<td class="thesis">'+escapeHTML(x.catalyst)+'</td><td class="report factcell">'+escapeHTML(x.fact)+'<span class="meta">'+escapeHTML(x.verification)+'</span></td></tr>';
  }).join('');
  const drafts=state.filter(x=>x.model).length;
- $('stats').innerHTML=[['独立条件分析',state.filter(x=>x.analysis).length+'项'],['可复算价格情景',drafts+'项'],['定价模型缺失',state.length-drafts+'项'],['未来成立条件已核验',state.filter(x=>x.gate==='verified').length+'项'],['复核日期',research.asOf],['当前列表',list.length+'项']].map(a=>'<div class="stat"><small>'+a[0]+'</small><strong>'+a[1]+'</strong></div>').join('');
+ $('stats').innerHTML=[['经营框架已记录',state.filter(x=>x.analysis).length+'项'],['可复算条件情景',drafts+'项'],['ETF绝对价锚待补',state.filter(x=>x.kind==='ETF').length+'项'],['未来成立条件已核验',state.filter(x=>x.gate==='verified').length+'项'],['复核日期',research.asOf],['当前列表',list.length+'项']].map(a=>'<div class="stat"><small>'+a[0]+'</small><strong>'+a[1]+'</strong></div>').join('');
  renderPortfolio();
 }
 function openDetail(x){
@@ -114,9 +117,11 @@ function openDetail(x){
  const a=x.audit;
  body+='<section class="section"><h3>研究完成度与下一步</h3><p>已完成：'+escapeHTML(a?.done||(x.model?'财报锚点整理、情景计算链、催化与风险框架。':'标的识别及催化、风险框架。'))+'</p><p>仍缺：'+escapeHTML(a?.missing||(x.model?'从财报到未来盈利的分项推导、估值倍数及情景权重依据；草案尚非完整估值。':'当期成分权重、成分盈利/现金流及同日净值，尚不能给出可靠的绝对价区。'))+'</p><p>下一核验：'+escapeHTML(a?.next||x.catalyst)+'</p>'+(a?'<p class="small">补研日期：'+escapeHTML(a.date)+'；'+escapeHTML(a.conclusion)+'</p>':'')+'</section>';
  body+='<section class="section"><h3>已核对事实 / 数据边界</h3><p>'+escapeHTML(x.fact)+'</p><p class="small"><a href="'+escapeHTML(x.source)+'" target="_blank" rel="noopener">来源 / 待核验入口 ↗</a></p></section>';
+ if(x.sources)body+='<p class="small">'+x.sources.map(s=>'<a href="'+escapeHTML(s[1])+'" target="_blank" rel="noopener">'+escapeHTML(s[0])+' ↗</a>').join(' · ')+'</p>';
  const n=x.analysis;
  if(n){
  body+='<section class="section"><h3>当前独立判断</h3><p>'+escapeHTML(n.verdict)+'</p></section>';
+ if(n.moat)body+='<section class="section"><h3>护城河与长期现金机制</h3><p>'+escapeHTML(n.moat)+'</p></section>';
  if(n.quality)body+='<section class="section"><h3>利润与现金质量</h3><p>'+escapeHTML(n.quality)+'</p></section>';
  if(n.bridge)body+='<section class="section"><h3>盈利 / 情景推导：事实锚点之后均为假设</h3><ul>'+n.bridge.map(t=>'<li>'+escapeHTML(t)+'</li>').join('')+'</ul></section>';
  body+='<section class="section"><h3>估值方法及参数依据</h3><p>'+escapeHTML(n.basis)+'</p></section>';
@@ -124,7 +129,7 @@ function openDetail(x){
  }
  if(x.model?.type==='lookthrough'){
  const m=x.model;
-  body+='<section class="section"><h3>前十大持仓穿透 · '+escapeHTML(m.holdingsDate)+'披露</h3><div class="lookthrough-summary"><span class="pill core">覆盖 '+fmt(m.coverage,2)+'%</span><span class="pill secondary">模型置信度 '+escapeHTML(m.confidence)+'</span><span class="pill secondary">固定复核净值 '+fmt(m.anchorNav,4)+'</span></div><div class="table-wrap lookthrough-table"><table><thead><tr><th>成分股</th><th class="num">权重</th><th>现金质量</th><th>赔率</th><th class="num">核心估值水平*</th><th>独立依据</th></tr></thead><tbody>'+m.top10.map(h=>'<tr><td><b>'+escapeHTML(h.name)+'</b><span class="code">'+escapeHTML(h.code)+'</span></td><td class="num">'+fmt(h.weight,2)+'%</td><td>'+escapeHTML(h.quality)+'</td><td>'+escapeHTML(h.odds)+'</td><td class="num">'+fmt(h.band[0]*100,0)+'%–'+fmt(h.band[1]*100,0)+'%</td><td>'+escapeHTML(h.basis)+'</td></tr>').join('')+'</tbody></table></div><p class="small">*“核心估值水平”表示相对复核日成分价格/估值水平的比例，不是统计胜率。'+escapeHTML(m.residualNote)+' 加权公式：Σ(持仓权重×成分核心估值水平)＋剩余权重×剩余篮子水平。复核净值在下一次基本面重估前保持固定，不随每日行情机械平移。</p></section>';
+  body+='<section class="section"><h3>前十大持仓穿透 · '+escapeHTML(m.holdingsDate)+'披露</h3><div class="lookthrough-summary"><span class="pill core">权重覆盖 '+fmt(m.coverage,2)+'%</span><span class="pill pending">'+escapeHTML(m.confidence)+'</span><span class="pill secondary">固定复核净值 '+fmt(m.anchorNav,4)+'</span></div><div class="table-wrap lookthrough-table"><table><thead><tr><th>成分股</th><th class="num">权重</th><th>现金质量判断</th><th>弹性判断</th><th class="num">假设折价水平*</th><th>经营依据</th></tr></thead><tbody>'+m.top10.map(h=>'<tr><td><b>'+escapeHTML(h.name)+'</b><span class="code">'+escapeHTML(h.code)+'</span></td><td class="num">'+fmt(h.weight,2)+'%</td><td>'+escapeHTML(h.quality)+'</td><td>'+escapeHTML(h.odds)+'</td><td class="num">'+fmt(h.band[0]*100,0)+'%–'+fmt(h.band[1]*100,0)+'%</td><td>'+escapeHTML(h.basis)+'</td></tr>').join('')+'</tbody></table></div><p class="small">*折价比例为研究假设，尚缺逐成分同日价格及绝对价值桥接，不是统计胜率。'+escapeHTML(m.residualNote)+' 剩余净资产包含非股票资产与负债，统一折价只是近似。加权公式：Σ(持仓权重×折价比例)＋剩余净资产权重×假设比例。中间情景由上沿÷90%反推，不构成独立公允价值验证。</p></section>';
  }
  if(v){
   body+='<section class="section"><h3>可复算情景：参数均为研究假设</h3><div class="grid">'+scenarioNames.map((n,i)=>'<div class="card inputs"><small>'+n+' · '+(i===1?'定价参照':'敏感性边界')+'</small><strong>'+fmt(v.cases[i],d)+'元</strong><p class="small">'+escapeHTML(formula(x,i))+'</p><p class="small">情景价格收益 '+(p===null?'缺行情':pct(v.cases[i]/p-1))+'</p></div>').join('')+'</div><p class="small">个股EPS/BPS为未来12个月或正常化盈利水平参照；ETF使用前十大披露持仓穿透＋剩余篮子折价。3–6个月是催化评价窗口。三种情景不分配未经验证的概率，不计算虚假统计胜率。</p></section>';
@@ -167,6 +172,13 @@ $('macro').innerHTML=research.macro.map(m=>'<article><h3>'+escapeHTML(m.title)+'
 $('rows').onclick=e=>{const tr=e.target.closest('tr');if(tr)openDetail(state.find(x=>x.code===tr.dataset.code));};
 $('rows').onkeydown=e=>{if(e.key==='Enter'){const tr=e.target.closest('tr');if(tr)openDetail(state.find(x=>x.code===tr.dataset.code));}};
 $('excludedRows').onclick=e=>{const tr=e.target.closest('tr');if(tr)openDetail(state.find(x=>x.code===tr.dataset.code));};
+$('idealGrid').onclick=e=>{const card=e.target.closest('[data-code]');if(card)openDetail(state.find(x=>x.code===card.dataset.code));};
+$('idealGrid').onkeydown=e=>{if(e.key==='Enter')$('idealGrid').onclick(e);};
+$('reviewScope').textContent=research.auditReview.scope;
+$('auditItems').innerHTML=research.auditReview.items.map(([name,note])=>'<li><b>'+escapeHTML(name)+'</b>：'+escapeHTML(note)+'</li>').join('');
+$('expansionMethod').textContent=research.expansion.scope+' '+research.expansion.method+' '+research.expansion.boundary;
+$('reviewHeading').textContent=state.length+'项逐项审查 · 点击查看公式、证据与催化';
+$('tier').options[0].textContent='全部'+state.length+'项';$('tier').options[1].textContent=state.length+'项条件情景';
 $('closeBtn').onclick=()=>$('detail').close();
 $('search').oninput=render;$('tier').onchange=render;
 $('scenarioBtn').onclick=()=>{scenario=(scenario+1)%3;$('scenarioBtn').textContent='对照情景：'+scenarioNames[scenario];render();};
