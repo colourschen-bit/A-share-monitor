@@ -19,6 +19,7 @@ for(const x of r.assets){
   const m=x.model;assert.equal(m.top10.length,10);assert.equal(new Set(m.top10.map(h=>h.code)).size,10);
   assert.ok(m.top10.every((h,i,a)=>h.weight>0&&(!i||a[i-1].weight>=h.weight)),x.code+' holding order');
   assert.ok(m.coverage>0&&m.coverage<=100);assert.ok(x.audit.missing.includes('绝对价锚'));
+  for(const h of m.top10.filter(h=>h.code==='09988'))assert.match(h.quality,/高资本开支/);
  }
 }
 // Prices in the zone must not imply that unverified business conditions passed.
