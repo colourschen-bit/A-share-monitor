@@ -51,7 +51,7 @@ function formula(x,i){
  if(m.type==='lookthrough'){
   if(i===0)return 'ETF核心区下沿 '+fmt(m.buyZone[0],3)+' × 85% 压力折价';
   if(i===1)return '核心区上沿 '+fmt(m.buyZone[1],3)+' ÷ 90%（反推保留10%安全边际的合理价值）';
-  return '锚定净值 '+fmt(m.anchorNav,4)+' × 修复系数 '+fmt(m.cases[2]/m.anchorNav,2);
+  return '固定复核净值 '+fmt(m.anchorNav,4)+' × 修复系数 '+fmt(m.cases[2]/m.anchorNav,2);
  }
  if(m.type==='index')return '锚定净值 '+fmt(m.anchorNav,4)+' × 合理'+m.metric+' '+fmt(m.fair[i],2)+' ÷ 当前'+m.metric+' '+fmt(m.currentMetric,2)+' × 基本面系数 '+fmt(m.fundamental[i],2);
  if(m.type==='fcf')return fmt(m.inputs[i],1)+'元FCFE ÷ '+fmt(m.yields[i]*100,1)+'% + '+m.extra[i]+'元投资折价值';
@@ -124,10 +124,10 @@ function openDetail(x){
  }
  if(x.model?.type==='lookthrough'){
  const m=x.model;
- body+='<section class="section"><h3>前五大持仓穿透 · '+escapeHTML(m.holdingsDate)+'披露</h3><div class="lookthrough-summary"><span class="pill core">覆盖 '+fmt(m.coverage,2)+'%</span><span class="pill secondary">模型置信度 '+escapeHTML(m.confidence)+'</span><span class="pill secondary">锚定净值 '+fmt(m.anchorNav,4)+'</span></div><div class="table-wrap lookthrough-table"><table><thead><tr><th>成分股</th><th class="num">权重</th><th>现金质量</th><th>赔率</th><th class="num">核心估值水平*</th><th>独立依据</th></tr></thead><tbody>'+m.top5.map(h=>'<tr><td><b>'+escapeHTML(h.name)+'</b><span class="code">'+escapeHTML(h.code)+'</span></td><td class="num">'+fmt(h.weight,2)+'%</td><td>'+escapeHTML(h.quality)+'</td><td>'+escapeHTML(h.odds)+'</td><td class="num">'+fmt(h.band[0]*100,0)+'%–'+fmt(h.band[1]*100,0)+'%</td><td>'+escapeHTML(h.basis)+'</td></tr>').join('')+'</tbody></table></div><p class="small">*“核心估值水平”表示相对复核日成分价格/估值水平的比例，不是统计胜率。'+escapeHTML(m.residualNote)+' 加权公式：Σ(持仓权重×成分核心估值水平)＋剩余权重×剩余篮子水平。</p></section>';
+  body+='<section class="section"><h3>前十大持仓穿透 · '+escapeHTML(m.holdingsDate)+'披露</h3><div class="lookthrough-summary"><span class="pill core">覆盖 '+fmt(m.coverage,2)+'%</span><span class="pill secondary">模型置信度 '+escapeHTML(m.confidence)+'</span><span class="pill secondary">固定复核净值 '+fmt(m.anchorNav,4)+'</span></div><div class="table-wrap lookthrough-table"><table><thead><tr><th>成分股</th><th class="num">权重</th><th>现金质量</th><th>赔率</th><th class="num">核心估值水平*</th><th>独立依据</th></tr></thead><tbody>'+m.top10.map(h=>'<tr><td><b>'+escapeHTML(h.name)+'</b><span class="code">'+escapeHTML(h.code)+'</span></td><td class="num">'+fmt(h.weight,2)+'%</td><td>'+escapeHTML(h.quality)+'</td><td>'+escapeHTML(h.odds)+'</td><td class="num">'+fmt(h.band[0]*100,0)+'%–'+fmt(h.band[1]*100,0)+'%</td><td>'+escapeHTML(h.basis)+'</td></tr>').join('')+'</tbody></table></div><p class="small">*“核心估值水平”表示相对复核日成分价格/估值水平的比例，不是统计胜率。'+escapeHTML(m.residualNote)+' 加权公式：Σ(持仓权重×成分核心估值水平)＋剩余权重×剩余篮子水平。复核净值在下一次基本面重估前保持固定，不随每日行情机械平移。</p></section>';
  }
  if(v){
- body+='<section class="section"><h3>可复算情景：参数均为研究假设</h3><div class="grid">'+scenarioNames.map((n,i)=>'<div class="card inputs"><small>'+n+' · '+(i===1?'定价参照':'敏感性边界')+'</small><strong>'+fmt(v.cases[i],d)+'元</strong><p class="small">'+escapeHTML(formula(x,i))+'</p><p class="small">情景价格收益 '+(p===null?'缺行情':pct(v.cases[i]/p-1))+'</p></div>').join('')+'</div><p class="small">个股EPS/BPS为未来12个月或正常化盈利水平参照；ETF使用前五大披露持仓穿透＋剩余篮子折价。3–6个月是催化评价窗口。三种情景不分配未经验证的概率，不计算虚假统计胜率。</p></section>';
+  body+='<section class="section"><h3>可复算情景：参数均为研究假设</h3><div class="grid">'+scenarioNames.map((n,i)=>'<div class="card inputs"><small>'+n+' · '+(i===1?'定价参照':'敏感性边界')+'</small><strong>'+fmt(v.cases[i],d)+'元</strong><p class="small">'+escapeHTML(formula(x,i))+'</p><p class="small">情景价格收益 '+(p===null?'缺行情':pct(v.cases[i]/p-1))+'</p></div>').join('')+'</div><p class="small">个股EPS/BPS为未来12个月或正常化盈利水平参照；ETF使用前十大披露持仓穿透＋剩余篮子折价。3–6个月是催化评价窗口。三种情景不分配未经验证的概率，不计算虚假统计胜率。</p></section>';
  if(x.model.evidenceUrl)body+='<p class="small"><a href="'+escapeHTML(x.model.evidenceUrl)+'" target="_blank" rel="noopener">估值锚数据来源 ↗</a> · '+escapeHTML(x.model.reference||'')+'</p>';
  body+='<section class="section"><h3>条件关注区与反向核验</h3><p class="small">基准估值 '+fmt(v.ev,d)+'；'+(x.model.type==='lookthrough'?'持仓穿透核心区 '+fmt(v.lo,d)+'–'+fmt(v.hi,d)+'，安全边际已经逐项计入，不再二次折现。':'按12%年化、半年折现后的值 '+fmt(v.pv,2)+'；额外安全边际 '+fmt(x.model.margin[1]*100)+'%–'+fmt(x.model.margin[0]*100)+'%。12%及安全边际是研究者的资金要求与风险折价，非市场事实。高现金/稀释风险使用更大折价，但不能抵消证据缺失。')+'</p>';
  if(p!==null&&x.model.type!=='fcf'&&x.model.type!=='index'&&x.model.type!=='lookthrough'){
