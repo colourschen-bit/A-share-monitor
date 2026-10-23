@@ -80,24 +80,18 @@ function renderPortfolio(){
   return '<article tabindex="0" data-code="'+x.code+'" class="portfolio-card"><div class="portfolio-top"><div><span class="rank">#'+x.portfolio.rank+'</span><strong>'+escapeHTML(x.name)+'</strong><span class="code">'+x.market+x.code+' · '+escapeHTML(x.origin||'原研究池')+'</span></div><b class="weight">'+x.portfolio.weight+'%</b></div><div class="role">'+escapeHTML(x.validation?x.validation.category+' · '+x.validation.priceGrade:x.portfolio.role)+'</div><div class="price-grid"><div><small>报价 '+escapeHTML(quoteDate(x.quote)||'缺失')+'</small><b>'+fmt(raw,d)+' '+unit+'</b></div><div><small>盈利/净资产条件区*</small><b>'+(v?fmt(nativeLo,d)+'–'+fmt(nativeHi,d)+' '+unit:'—')+'</b></div><div><small>压力情景（非底价）</small><b>'+stress+'</b></div></div><span class="pill '+bs[1]+'">'+escapeHTML(bs[0])+'</span><p>'+escapeHTML(x.validation?.summary||x.portfolio.reason)+'</p><small>成立条件：'+escapeHTML(x.catalyst)+'</small><span class="meta">'+escapeHTML(x.quoteOrigin)+' · *条件区不代表已通过现金回报核验，点击看详情</span></article>';
  }).join('')+'<article class="portfolio-card cash-card"><div class="portfolio-top"><div><span class="rank">现金</span><strong>货币基金 / 现金</strong></div><b class="weight">'+p.cash+'%</b></div><div class="role">组合选择权</div><p>任何核心标的未进入条件买入区时，相应目标仓位继续留在现金，不由其他资产自动填满。</p><small>用于财报后错杀、系统性风险和分档建仓；不是闲置仓位。</small></article>';
  const excluded=state.filter(x=>!x.portfolio?.included).sort((a,b)=>a.portfolio.rank-b.portfolio.rank);
+ $('excludedMethod').textContent=research.excludedReview.method+' '+research.excludedReview.groups;
+ $('excludedScope').textContent=research.excludedReview.scope;
  $('excludedRows').innerHTML=excluded.map(x=>{
-  const v=value(x),d=digits(x),fx=x.market==='HK'?research.hkdCny:1;return '<tr data-code="'+x.code+'"><td class="num">'+x.portfolio.rank+'</td><td><b>'+escapeHTML(x.name)+'</b><span class="code">'+x.market+x.code+'</span></td><td><span class="pill secondary">'+escapeHTML(x.portfolio.grade)+'</span></td><td>'+escapeHTML(x.portfolio.reason)+'</td><td class="num">'+(v?fmt(v.lo/fx,d)+'–'+fmt(v.hi/fx,d)+(x.market==='HK'?' HKD':' CNY'):'—')+(x.additionReview?.cashGate?'<span class="meta">恢复情景；现金未支持</span>':'')+'</td><td>'+escapeHTML(x.catalyst)+'</td></tr>';
+  const v=value(x),d=digits(x),fx=x.market==='HK'?research.hkdCny:1,z=x.rankReview;
+  const moved=x.portfolio.rank-z.previousRank;
+  const change=moved<0?'上调'+(-moved)+'位':moved>0?'下调'+moved+'位':'顺位保留';
+  return '<tr tabindex="0" data-code="'+x.code+'"><td class="num"><b>#'+x.portfolio.rank+'</b><span class="meta">候选 '+z.candidateRank+'/46</span><span class="meta">'+change+'</span></td><td><b>'+escapeHTML(x.name)+'</b><span class="code">'+x.market+x.code+'</span></td><td><span class="pill secondary">'+escapeHTML(x.portfolio.grade)+'</span></td><td>'+escapeHTML(z.reason)+'</td><td class="num">'+(v?fmt(v.lo/fx,d)+'–'+fmt(v.hi/fx,d)+(x.market==='HK'?' HKD':' CNY'):'—')+'<span class="meta">'+(x.additionReview?.cashGate?'恢复情景；现金未支持':x.model.type==='lookthrough'?'折价情景，绝对价值待补':'条件情景，非已核验买单')+'</span></td><td>'+escapeHTML(z.pricing)+'<span class="meta">事实锚：'+escapeHTML(z.anchor)+' · 排序复核 '+z.date+'</span></td><td>'+escapeHTML(x.catalyst)+'</td></tr>';
  }).join('');
  $('portfolioMethod').textContent=p.method+' '+p.caveat+' '+p.execution+' '+p.changes;
  const buckets={};included.forEach(x=>{buckets[x.portfolio.bucket]=(buckets[x.portfolio.bucket]||0)+x.portfolio.weight;});
  $('riskFactors').innerHTML=Object.entries(buckets).map(([k,v])=>'<span class="pill secondary">'+escapeHTML(k)+' '+v+'%</span>').join(' ')+'<p class="small">按主要盈利驱动归类，不是实测相关系数。金融13%、电网16%、数字需求17%仍有共同风险；消费与出口、利率与信用也可能一起受压。海油和快递的油价敏感性仅提供部分缓冲。</p>';
  renderCoreValidation();
- renderAdditions();
-}
-function renderAdditions(){
- const review=research.additionReview;if(!review||!$('additionRows'))return;
- $('additionMethod').textContent=review.method;
- $('additionPortfolio').textContent=review.portfolio;
- $('additionPricing').textContent=review.pricing;
- $('additionRows').innerHTML=state.filter(x=>x.additionReview).sort((a,b)=>a.additionReview.rank-b.additionReview.rank).map(x=>{
-  const a=x.additionReview,v=value(x);
-  return '<tr tabindex="0" data-code="'+x.code+'"><td class="num"><b>'+a.rank+' / #'+x.portfolio.rank+'</b></td><td><b>'+escapeHTML(x.name)+'</b><span class="meta">'+x.code+' · '+escapeHTML(x.reportPeriod)+'</span></td><td>'+escapeHTML(a.quality)+'</td><td>'+escapeHTML(a.decision)+'</td><td class="num">'+fmt(v.lo,2)+'–'+fmt(v.hi,2)+(a.cashGate?'<span class="meta">仅为恢复情景，现金未支持</span>':'<span class="meta">价格与经营条件须同时满足</span>')+'</td><td>'+escapeHTML(a.priceEvidence)+'</td><td>'+escapeHTML(x.catalyst)+'</td></tr>';
- }).join('');
 }
 function renderCoreValidation(){
  const a=research.coreValidation;if(!a||!$('validationRows'))return;
@@ -115,7 +109,7 @@ function render(){
  const list=state.filter(x=>{
  const v=value(x),p=price(x);
  return [x.name,x.code,x.catalyst,x.risk,x.analysis?.verdict].join(' ').toLowerCase().includes(query)&&
- (filter==='all'||filter==='core'&&x.tier==='core'||filter==='draft'&&x.model||filter==='additions'&&x.additionReview||filter==='pending'&&(!x.model||x.model.type==='lookthrough'||x.validation?.priceGrade==='原买价依据偏弱'||x.additionReview?.cashGate)||filter==='zone'&&signal(x)[0]==='有折价');
+ (filter==='all'||filter==='core'&&x.tier==='core'||filter==='draft'&&x.model||filter==='pending'&&(!x.model||x.model.type==='lookthrough'||x.validation?.priceGrade==='原买价依据偏弱'||x.additionReview?.cashGate)||filter==='zone'&&signal(x)[0]==='有折价');
  });
  $('rows').innerHTML=list.map(x=>{
  const v=value(x),p=price(x),s=signal(x);
@@ -139,8 +133,11 @@ function openDetail(x){
  $('dCode').textContent=x.market+x.code+' · 3–6月评价窗口 · 全部估值为人民币';
  $('dName').textContent=x.name;
  let body='<div class="audit">价格判断：'+signal(x)[0]+'（'+escapeHTML(signal(x)[2])+'）；报价时间：'+escapeHTML(x.quote?.time||'缺失')+'；研究进度：'+escapeHTML(progress(x))+'；经营兑现：'+fulfillment(x)+'。研究完成与未来催化兑现是两回事。折价不自动等于买入，溢价不自动等于卖出。</div>';
+ if(x.rankReview){const z=x.rankReview;
+  body+='<section class="section"><h3>候选排序核验 · 候选'+z.candidateRank+'/46 · 全池#'+x.portfolio.rank+'</h3><p>'+escapeHTML(x.portfolio.grade)+'；原全池#'+z.previousRank+'。'+escapeHTML(z.reason)+'</p><p>价格依据与缺口：'+escapeHTML(z.pricing)+'</p><p class="small">事实锚：'+escapeHTML(z.anchor)+'；排序复核：'+z.date+'。候选顺位不改变15只核心席位，也不代表当前可执行买入。</p></section>';
+ }
  if(x.additionReview){const a=x.additionReview;
-  body+='<section class="section"><h3>本轮新增研究 · 第'+a.rank+'/9 · 全池第'+x.portfolio.rank+'/61</h3><p>长期质地：'+escapeHTML(a.quality)+'。当前安排：'+escapeHTML(a.decision)+'。</p><p>优先级与组合：'+escapeHTML(a.reason)+'</p><p>价格证据：'+escapeHTML(a.priceEvidence)+'。</p>';
+  body+='<section class="section"><h3>独立研究与价格依据</h3><p>长期质地：'+escapeHTML(a.quality)+'。当前安排：'+escapeHTML(a.decision)+'。</p><p>优先级与组合：'+escapeHTML(a.reason)+'</p><p>价格证据：'+escapeHTML(a.priceEvidence)+'。</p>';
   if(a.cashGate)body+='<div class="audit">该区间只表示盈利恢复情景，当前现金不支持执行。价格达区也保持观察，须先满足现金恢复和渠道条件。</div>';
   if(a.bank)body+='<p>普通股BPS '+fmt(a.bank.reportedBps,2)+'元 − 期后股息预留 '+fmt(a.bank.dividendReserve,3)+'元 = 模型BPS '+fmt(a.bank.modelBps,3)+'元。PB=(持续ROE−长期增长)/(股权要求回报−长期增长)。三情景ROE：'+a.bank.roe.map(v=>fmt(v*100,1)+'%').join(' / ')+'；资本要求：'+a.bank.cost.map(v=>fmt(v*100,1)+'%').join(' / ')+'；长期增长：'+a.bank.growth.map(v=>fmt(v*100,1)+'%').join(' / ')+'。压力/修复BPS为基数90%/105%的假设，非新披露净资产。</p>';
   if(a.cashCheck){const c=a.cashCheck,kind=c.currentOnly?'本期':'TTM';
@@ -215,9 +212,8 @@ $('macro').innerHTML=research.macro.map(m=>'<article><h3>'+escapeHTML(m.title)+'
 $('rows').onclick=e=>{const tr=e.target.closest('tr');if(tr)openDetail(state.find(x=>x.code===tr.dataset.code));};
 $('rows').onkeydown=e=>{if(e.key==='Enter'){const tr=e.target.closest('tr');if(tr)openDetail(state.find(x=>x.code===tr.dataset.code));}};
 $('excludedRows').onclick=e=>{const tr=e.target.closest('tr');if(tr)openDetail(state.find(x=>x.code===tr.dataset.code));};
+$('excludedRows').onkeydown=e=>{if(e.key==='Enter')$('excludedRows').onclick(e);};
 $('validationRows').onclick=e=>{const tr=e.target.closest('tr');if(tr)openDetail(state.find(x=>x.code===tr.dataset.code));};
-$('additionRows').onclick=e=>{const tr=e.target.closest('tr');if(tr)openDetail(state.find(x=>x.code===tr.dataset.code));};
-$('additionRows').onkeydown=e=>{if(e.key==='Enter')$('additionRows').onclick(e);};
 $('idealGrid').onclick=e=>{const card=e.target.closest('[data-code]');if(card)openDetail(state.find(x=>x.code===card.dataset.code));};
 $('idealGrid').onkeydown=e=>{if(e.key==='Enter')$('idealGrid').onclick(e);};
 $('reviewScope').textContent=research.auditReview.scope;
