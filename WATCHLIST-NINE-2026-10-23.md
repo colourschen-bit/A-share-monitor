@@ -105,7 +105,6 @@
 来源：
 
 - [2026中报全文](https://www.nbcb.com.cn/about_nbcb/information_diclosure/periodic_report/202608/W020260820687054352020.pdf)
-- [2025年报/年度财务决算](null)
 
 ## 3. 成都银行（601838）· 全池第21
 

@@ -56,6 +56,8 @@ assert.equal((nodes.additionRows.innerHTML.match(/<tr /g)||[]).length,9);
 const added=r.assets.filter(x=>x.additionReview).sort((a,b)=>a.additionReview.rank-b.additionReview.rank);
 assert.deepEqual(Array.from(added,x=>x.code),['603195','002142','601838','002032','601009','600096','600132','000568','002555']);
 assert.ok(added.every(x=>x.gate==='pending'&&!x.portfolio.included&&!x.snapshot));
+assert.ok(added.every(x=>x.sources.every(([label,url])=>label&&typeof url==='string'&&url.startsWith('https://'))));
+assert.ok(!/\]\((?:undefined|null)\)/.test(fs.readFileSync('WATCHLIST-NINE-2026-10-23.md','utf8')));
 assert.equal(added.find(x=>x.code==='002032').reportPeriod,'2026-09-30');
 // Ordinary shareholder book values exclude other capital and reserve only the
 // specified subsequent dividend, once. PB values are already present values.

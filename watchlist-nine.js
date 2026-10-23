@@ -168,7 +168,7 @@
    multiples:bank?s.roe.map((v,i)=>(v-s.growth[i])/(s.cost[i]-s.growth[i])):s.pe,
    extra:[0,0,0],weights:[0,1,0],margin:s.margin,currency:'CNY',discountYears:bank?0:.5,
    status:'conditional',why:s.bridge.join(' '),reference:'2026-10-23独立条件模型；未来参数为研究假设，未经胜率验证',evidenceUrl:s.source};
-  const sources=s.sources||[['2026中报全文',s.source],['2025年报/年度财务决算',s.annual]];
+  const sources=s.sources||[['2026中报全文',s.source],...(s.annual?[['2025年报/年度财务决算',s.annual]]:[])];
   const ci=cashInputs[s.code],ttm=a=>a[0]-a[1]+a[2];
   const cashCheck=ci?{...ci,ocfTtm:ttm(ci.ocf),capexTtm:ttm(ci.capex),minorityPaid:ci.minorityDiv?ttm(ci.minorityDiv):null,
    surplus:ttm(ci.ocf)-ttm(ci.capex),perShare:(ttm(ci.ocf)-ttm(ci.capex))/ci.shares}:null;
