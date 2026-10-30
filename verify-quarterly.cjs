@@ -30,6 +30,14 @@ for(const x of r.assets){
  assert.ok(!/undefined|NaN/.test(nodes.dBody.innerHTML),x.code+' detail fields');
  assert.match(nodes.dBody.innerHTML,/执行限制与复核时点/);
 }
+// Preserve previously verified financial boundaries while changing presentation.
+near(by('02328').model.inputs[1],303688000000/22242765303-.34);
+same(by('603444').model.inputs,[22,26.5,30]);
+for(const x of core.filter(x=>x.validation.cross)){
+ const z=x.validation;assert.equal(z.cross.flows.length,10);assert.ok(z.sensitivity[0]<z.cross.pv&&z.sensitivity[1]>z.cross.pv);assert.ok(z.cross.terminalShare>0&&z.cross.terminalShare<1);
+}
+for(const x of r.assets.filter(x=>x.kind==='ETF')){const m=x.model;assert.ok(m.coverage>0&&m.coverage<=100);assert.equal(new Set(m.top10.map(h=>h.code)).size,10);}
+
 // Report replaces forecast in active facts, without claiming a fresh valuation.
 assert.match(by('002463').fact,/正式2026Q3/);assert.match(by('002463').fact,/56.2194/);assert.match(by('002463').fact,/27.0385/);
 assert.equal(by('002463').reportPeriod,'2026-09-30');assert.ok(by('002463').executionHold);assert.match(by('002463').model.why,/未由本季数据重建/);
