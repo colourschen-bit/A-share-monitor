@@ -622,9 +622,16 @@ const entries={
 };
 const quotes=[{"code": "00700", "name": "腾讯控股", "price": 383.6, "time": "2026/10/30 16:08:14"}, {"code": "600941", "name": "中国移动", "price": 102.13, "time": "20261030161434"}, {"code": "600036", "name": "招商银行", "price": 43.55, "time": "20261030161448"}, {"code": "002270", "name": "华明装备", "price": 18.38, "time": "20261030161445"}, {"code": "000333", "name": "美的集团", "price": 89.18, "time": "20261030161433"}, {"code": "02328", "name": "中国财险", "price": 16.28, "time": "2026/10/30 16:08:10"}, {"code": "600938", "name": "中国海油", "price": 35.97, "time": "20261030161457"}, {"code": "600900", "name": "长江电力", "price": 29.74, "time": "20261030161456"}, {"code": "300760", "name": "迈瑞医疗", "price": 181.75, "time": "20261030161454"}, {"code": "002028", "name": "思源电气", "price": 101.97, "time": "20261030161433"}, {"code": "605499", "name": "东鹏饮料", "price": 108.0, "time": "20261030161447"}, {"code": "02057", "name": "中通快递-W", "price": 157.2, "time": "2026/10/30 16:08:14"}, {"code": "001872", "name": "招商港口", "price": 25.29, "time": "20261030161500"}, {"code": "600406", "name": "国电南瑞", "price": 23.16, "time": "20261030161445"}, {"code": "603444", "name": "吉比特", "price": 334.0, "time": "20261030161500"}, {"code": "603195", "name": "公牛集团", "price": 37.19, "time": "20261030161454"}, {"code": "002142", "name": "宁波银行", "price": 35.17, "time": "20261030161415"}, {"code": "600660", "name": "福耀玻璃", "price": 53.49, "time": "20261030161447"}, {"code": "002032", "name": "苏 泊 尔", "price": 42.7, "time": "20261030161439"}, {"code": "600690", "name": "海尔智家", "price": 20.74, "time": "20261030161456"}, {"code": "601838", "name": "成都银行", "price": 19.94, "time": "20261030161453"}, {"code": "600096", "name": "云天化", "price": 24.72, "time": "20261030161458"}, {"code": "603993", "name": "洛阳钼业", "price": 13.65, "time": "20261030161446"}, {"code": "601899", "name": "紫金矿业", "price": 27.6, "time": "20261030161438"}, {"code": "601009", "name": "南京银行", "price": 12.37, "time": "20261030161454"}, {"code": "01193", "name": "华润燃气", "price": 16.32, "time": "2026/10/30 16:08:08"}, {"code": "601318", "name": "中国平安", "price": 52.8, "time": "20261030161455"}, {"code": "300124", "name": "汇川技术", "price": 55.39, "time": "20261030161406"}, {"code": "603345", "name": "安井食品", "price": 81.62, "time": "20261030161451"}, {"code": "603606", "name": "东方电缆", "price": 36.94, "time": "20261030161441"}, {"code": "601058", "name": "赛轮轮胎", "price": 11.66, "time": "20261030161500"}, {"code": "601728", "name": "中国电信", "price": 7.01, "time": "20261030161455"}, {"code": "002472", "name": "双环传动", "price": 41.21, "time": "20261030161500"}, {"code": "600132", "name": "重庆啤酒", "price": 38.25, "time": "20261030161452"}, {"code": "000807", "name": "云铝股份", "price": 25.36, "time": "20261030161445"}, {"code": "520550", "name": "港股红利低波ETF招商", "price": 1.056, "time": "20261030161457"}, {"code": "601816", "name": "京沪高铁", "price": 5.2, "time": "20261030161458"}, {"code": "001280", "name": "中国铀业", "price": 57.79, "time": "20261030161442"}, {"code": "600583", "name": "海油工程", "price": 6.56, "time": "20261030161447"}, {"code": "600875", "name": "东方电气", "price": 21.56, "time": "20261030161451"}, {"code": "09988", "name": "阿里巴巴-W", "price": 97.05, "time": "2026/10/30 16:08:14"}, {"code": "002463", "name": "沪电股份", "price": 87.34, "time": "20261030161445"}, {"code": "000792", "name": "盐湖股份", "price": 21.75, "time": "20261030161500"}, {"code": "002555", "name": "三七互娱", "price": 14.47, "time": "20261030161415"}, {"code": "002438", "name": "江苏神通", "price": 11.95, "time": "20261030161421"}, {"code": "000568", "name": "泸州老窖", "price": 77.07, "time": "20261030161415"}, {"code": "513260", "name": "恒生科技ETF汇添富", "price": 0.9, "time": "20261030161436"}, {"code": "159928", "name": "消费ETF汇添富", "price": 0.676, "time": "20261030161445"}, {"code": "562550", "name": "绿电ETF华夏", "price": 1.126, "time": "20261030161447"}, {"code": "601872", "name": "招商轮船", "price": 17.71, "time": "20261030161457"}, {"code": "002318", "name": "久立特材", "price": 15.78, "time": "20261030161500"}, {"code": "002335", "name": "科华数据", "price": 22.8, "time": "20261030161409"}, {"code": "516120", "name": "化工ETF富国", "price": 0.732, "time": "20261030161455"}, {"code": "513090", "name": "香港证券ETF易方达", "price": 1.555, "time": "20261030161500"}, {"code": "688313", "name": "仕佳光子", "price": 92.53, "time": "20261030161442"}, {"code": "513120", "name": "港股创新药ETF广发", "price": 1.155, "time": "20261030161457"}, {"code": "588000", "name": "科创50ETF华夏", "price": 1.228, "time": "20261030161446"}, {"code": "589720", "name": "科创创新药ETF国泰", "price": 0.752, "time": "20261030161457"}, {"code": "159530", "name": "机器人ETF易方达", "price": 1.238, "time": "20261030161430"}, {"code": "601012", "name": "隆基绿能", "price": 11.0, "time": "20261030161455"}, {"code": "300207", "name": "欣旺达", "price": 16.06, "time": "20261030161445"}];
 
+// Freeze the last published model zone before applying this quarter's inputs.
+for(const x of r.assets){
+ const m=x.model;if(!m)continue;
+ const base=m.type==='lookthrough'?m.cases[1]:m.inputs[1]*m.multiples[1]+m.extra[1];
+ const pv=base/Math.pow(1.12,m.discountYears??.5);
+ x.previousReview={date:'2026-10-23',fx:r.hkdCny,zone:m.type==='lookthrough'?[...m.buyZone]:[pv*(1-m.margin[0]),pv*(1-m.margin[1])]};
+}
 for(const q of quotes){const x=by(q.code);if(x)x.snapshot={price:q.price,time:q.time};}
 for(const [code,q] of Object.entries(entries)){
- const x=by(code),f=q.fields;x.quarterReview={...q,date:'2026-10-30'};
+ const x=by(code),f=q.fields;x.quarterReview={...q,date:'2026-10-30',depth:'detailed'};
  x.reportPeriod=['00700','02057','09988','01193'].includes(code)?x.reportPeriod:'2026-09-30';
  x.fact=f['披露与财务事实']||[f['集团口径'],f['新增正式披露'],f['现金与反馈']].filter(Boolean).join(' ');
  const model=f['模型修改']||f['模型与条件'];const condition=f['成立/失效及下一核验']||f['模型与条件'];
@@ -633,37 +640,53 @@ for(const [code,q] of Object.entries(entries)){
  x.analysis={...x.analysis,verdict:q.status+'；'+model,quality:x.fact,basis:model,bridge:[model],reflexivity:f['反馈与预期差']||f['现金与反馈'],limit:'季度关键字段复核，不等于完整DCF；保留旧情景作为对照，详见本轮报告。'};
  x.audit={date:'2026-10-30',stage:'季度复核 · '+q.status,done:'公开财报关键字段与新旧假设对照。',missing:model,next:condition,conclusion:'研究者判断；价格触区不自动通过成立条件。'};
  x.sources=q.sources; x.source=q.sources[0]?.[1]||x.source;x.gate='pending';
- if(x.validation){x.validation.summary=q.status+'；'+model;x.validation.finding=x.validation.summary;}
+ if(x.validation){x.validation.summary=q.status+'；'+model;}
  if(x.rankReview){x.rankReview.reason=q.status+'；'+(f['反馈与预期差']||f['现金与反馈']);x.rankReview.pricing=model;x.rankReview.anchor=['00700','02057','09988','01193'].includes(code)?'集团财报待出；详见最新披露':'2026Q3';x.rankReview.date='2026-10-30';}
 }
-// These book-value-only sensitivities require dividend/equity reconciliation.
-for(const [code,bps] of [['600036',46.87],['002142',37.12],['601838',21.98],['601009',16.01]]){
- const x=by(code);x.model.inputs=[bps*.9,bps,bps*1.05];x.model.discountYears=0;
- x.model.why='Q3普通股BPS '+bps+'元，沿用原PB与安全边际，仅更新报表基数；股息/资本权益对账后方可启用，非最终执行买价。';
- if(x.additionReview?.bank)Object.assign(x.additionReview.bank,{reportedBps:bps,modelBps:bps,dividendReserve:0});
+// Reported Q3 BPS enters a sensitivity only; dividends remain unreconciled.
+for(const [code,bps,inputs] of [
+ ['600036',46.87,[42,46.87,48]],
+ ['002142',37.12,[37.12*.9,37.12,37.12*1.05]],
+ ['601838',21.98,[21.98*.9,21.98,21.98*1.05]],
+ ['601009',16.01,[16.01*.9,16.01,16.01*1.05]]]){
+ const x=by(code);x.model.inputs=inputs;x.model.discountYears=0;
+ x.model.why='Q3普通股BPS '+bps+'元；仅更新报表基数，沿用PB及安全边际。股息/资本权益对账未完成，区间仅为敏感性，尚未启用。';
+ x.bankReconciliation={status:'pending',reportedBps:bps,scenarioBps:inputs,dividendReserve:null};
+ if(x.additionReview?.bank)Object.assign(x.additionReview.bank,{reportedBps:bps,modelBps:bps,dividendReserve:0,dividendStatus:'pending'});
 }
-by('600036').model.inputs=[42,46.87,48];
 const sy=by('002028');sy.model.inputs=[4.58,5.83,7.05];sy.model.multiples=[16,21,25];sy.model.extra=[0,0,0];
-sy.model.reviewValueToday=110;sy.model.reviewBuyZone=[90,98];sy.model.targetDate='2027-12-31';
+sy.model.reviewValueToday=110;sy.model.reviewBuyZone=[90,98];sy.model.targetDate='2027-12-31';sy.model.forecastYear=2027;sy.model.valuationDate='2026-10-29';sy.model.margin=[1-90/110,1-98/110];
 sy.model.why='同步10月29日专题：2027 EPS4.58/5.83/7.05×PE16/21/25；期末约73/123/176元。专题基准现值约110元，条件关注区90–98元；参数为研究假设，不能因行情改动。';
-for(const code of ['603195','600690','600096']){const x=by(code);x.portfolio.grade='C';x.rankReview.group='C';}
-by('002318').portfolio.grade='D';by('002318').rankReview.group='D';
-// Reorder only the affected candidates within groups, preserving other relative priorities.
-const excluded=r.assets.filter(x=>!x.portfolio.included).sort((a,b)=>a.portfolio.rank-b.portfolio.rank);
-for(const x of excluded)x.rankReview.previousRank=x.portfolio.rank;
-const moved=new Set(['603195','600690','600096','002318']);
-let order=excluded.filter(x=>!moved.has(x.code));
-let pos=order.findIndex(x=>x.portfolio.grade==='C');order.splice(pos,0,...['603195','600690','600096'].map(by));
-pos=order.findIndex(x=>x.portfolio.grade==='D');order.splice(pos,0,by('002318'));
-order.forEach((x,i)=>{x.portfolio.rank=i+16;x.rankReview.candidateRank=i+1;});
+for(const code of ['603195','600690','600096']){by(code).rankReview.group='C';}
+by('002318').rankReview.group='D';
+// Explicit research priorities; never use display labels as grade keys.
+const priorityGroups={
+ B:['002142','600660','002032','601838','601899','603993','601009','01193','601318'],
+ C:['300124','603345','603606','601058','601728','002472','600132','603195','600690','000807','520550','601816','001280','600583','600875','09988','002463','000792','600096','002555','002438','000568','513260','159928','562550','601872','002335','516120','513090'],
+ D:['002318','688313','513120','588000','589720','159530','601012','300207']
+};
+const gradeLabels={B:'B 优先候补',C:'C 等待证据',D:'D 暂缓执行'};
+const order=Object.entries(priorityGroups).flatMap(([group,codes])=>codes.map(code=>({x:by(code),group})));
+if(order.length!==46||new Set(order.map(o=>o.x.code)).size!==46)throw new Error('Candidate priority coverage');
+order.forEach(({x,group},i)=>{
+ const prior=x.portfolio.rank;x.rankReview.previousRank=prior;x.rankReview.previousRankDate='2026-10-23';
+ x.rankReview.evidenceDate=x.rankReview.date;x.rankReview.date='2026-10-30';
+ x.rankReview.group=group;x.portfolio.grade=gradeLabels[group];x.portfolio.rank=i+16;x.rankReview.candidateRank=i+1;
+});
+by('601899').rankReview.reason+=' 本季现金证据相对洛钼更充分，补研优先级前移；不自动进入核心。';
+by('603993').rankReview.reason+=' 利润增长尚未同幅变现，置于紫金之后，等待矿山/贸易现金拆分。';
+by('603195').rankReview.reason+=' 降入C后保留品牌渠道的补研价值，排在现有经营验证候选之后；未重做收益率排名。';
+by('600690').rankReview.reason+=' 盈利和回款共同承压，消费候补排在公牛之后，修复前不提级。';
+by('600096').rankReview.reason+=' 与资源候选一并观察价差及采购占款，排在盐湖之后；不是周期收益预测。';
 for(const x of r.assets.filter(x=>x.kind==='ETF')){
- x.quarterReview={date:'2026-10-30',status:'Q3报告已出，前十与绝对定价待复算',fields:{'披露状态':'已检得10月27日Q3报告；下方6月末前十及旧价区仅作历史对照。','定价缺口':'尚未完成9月末权重、覆盖率及逐成分绝对价值核验，不能作为当前可靠建仓价。'},sources:[]};
+ x.quarterReview={date:'2026-10-30',depth:'disclosure',status:'Q3报告已出，前十与绝对定价待复算',fields:{'披露状态':'已检得10月27日Q3报告；下方6月末前十及旧价区仅作历史对照。','定价缺口':'尚未完成9月末权重、覆盖率及逐成分绝对价值核验，不能作为当前可靠建仓价。'},sources:[]};
  x.audit={...x.audit,date:'2026-10-30',stage:'Q3披露已确认，穿透重算待完成',missing:'Q3权重与绝对价锚、剩余篮子估值。'};
  x.rankReview.pricing='Q3报告已出；目前前十持仓与折价模型仍为6月末历史对照，绝对价值待补。';
 }
-r.asOf='2026-10-30';r.version='4.5-quarterly-review';r.window=['2027-04-30','2028-04-30'];
+r.asOf='2026-10-30';r.version='4.5-quarterly-review';delete r.window;r.investmentWindow={from:'2027-04-30',to:'2028-04-30'};
+r.investmentHorizonMonths=[6,18];r.reviewDueAt='2027-01-30';
 r.hkdCny=.85594;r.fxDate='2026-10-30';by('01193').model.inputs=[1.6,1.9,2.2].map(v=>v*r.hkdCny);
-r.coreValidation.headline='2026-10-30：15核心及85%股票/15%现金框架保留；38项已作详细季度复核。原4/5/6为10月23日历史核验，不是本轮通过数。';
+r.coreValidation.headline='2026-10-30：15核心及85%股票/15%现金框架保留；详细复核数与披露数见下方统计。原4/5/6为10月23日历史核验，不是本轮通过数。';
 r.coreValidation.correction='思源同步独立专题；银行更新普通股BPS敏感性。南瑞、东鹏、美的、财险、长江需优先补现金、盈利或口径证据。';
 r.coreValidation.limits='下方现金参照仍为10月23日敏感性，未完成本轮全新DCF，不视为当前可执行买单。熊/基准/牛未校准概率，0/1/0为情景选择开关。';
 r.portfolio.method=r.coreValidation.headline;r.portfolio.changes='候补公牛/海尔/云天化B→C，久立C→D；其他相邻顺位沿用，未完成新定价不自动提级。';
@@ -672,4 +695,61 @@ r.excludedReview.scope='38项详细季度复核；其余13只股票仅核披露�
 r.excludedReview.date='2026-10-30';r.excludedReview.method='候补排序按新财报调整证据等级，未详细重研的相邻名次沿用10月23日。';
 r.auditReview.scope=r.excludedReview.scope;
 r.disclaimer='条件价区不是自动买单。38项季度关键字段已复核；未完成的现金、股息、ETF穿透与定价明确保留缺口。';
+
+const disclosureOnly=[{"code": "603345", "name": "安井食品", "firstPublicAt": "2026-10-28 16:51:36", "source": "https://data.eastmoney.com/notices/detail/603345/AN202610281831115072.html"}, {"code": "601058", "name": "赛轮轮胎", "firstPublicAt": "2026-10-30 15:37:24", "source": "https://data.eastmoney.com/notices/detail/601058/AN202610301831223956.html"}, {"code": "601728", "name": "中国电信", "firstPublicAt": "2026-10-22 18:56:04", "source": "https://data.eastmoney.com/notices/detail/601728/AN202610221830807898.html"}, {"code": "002472", "name": "双环传动", "firstPublicAt": "2026-10-26 19:03:11", "source": "https://data.eastmoney.com/notices/detail/002472/AN202610261830936374.html"}, {"code": "000807", "name": "云铝股份", "firstPublicAt": "2026-10-29 18:28:08", "source": "https://data.eastmoney.com/notices/detail/000807/AN202610291831181384.html"}, {"code": "601816", "name": "京沪高铁", "firstPublicAt": "2026-10-30 15:50:10", "source": "https://data.eastmoney.com/notices/detail/601816/AN202610301831225026.html"}, {"code": "001280", "name": "中国铀业", "firstPublicAt": "2026-10-28 18:57:11", "source": "https://data.eastmoney.com/notices/detail/001280/AN202610281831126716.html"}, {"code": "600583", "name": "海油工程", "firstPublicAt": "2026-10-29 16:05:51", "source": "https://data.eastmoney.com/notices/detail/600583/AN202610291831170976.html"}, {"code": "002463", "name": "沪电股份", "firstPublicAt": "2026-10-27 16:06:09", "source": "https://data.eastmoney.com/notices/detail/002463/AN202610271831026171.html"}, {"code": "002438", "name": "江苏神通", "firstPublicAt": "2026-10-26 19:23:10", "source": "https://data.eastmoney.com/notices/detail/002438/AN202610261830940267.html"}, {"code": "601872", "name": "招商轮船", "firstPublicAt": "2026-10-28 16:23:14", "source": "https://data.eastmoney.com/notices/detail/601872/AN202610281831106165.html"}, {"code": "688313", "name": "仕佳光子", "firstPublicAt": "2026-10-21 17:24:44", "source": "https://data.eastmoney.com/notices/detail/688313/AN202610211830763307.html"}, {"code": "300207", "name": "欣旺达", "firstPublicAt": "2026-10-29 18:32:13", "source": "https://data.eastmoney.com/notices/detail/300207/AN202610291831181603.html"}];
+
+for(const d of disclosureOnly){
+ const x=by(d.code);x.disclosure={...d,reportPeriod:'2026-09-30',status:'formal'};
+ x.quarterReview={date:'2026-10-30',depth:'disclosure',status:'正式Q3已出，仅核披露；盈利与估值未重做',fields:{'披露状态':'已确认2026Q3正式报告；现有旧事实锚及模型尚未据此完成重估。','首次公开':d.firstPublicAt,'定价限制':'旧区间仅供对照，不作为本季已核验建仓区。'},sources:[['正式季报公告',d.source]]};
+ x.audit={...x.audit,date:'2026-10-30',stage:'仅核披露，估值未复核',done:'已核正式Q3披露状态。',missing:'正式财报关键字段、盈利现金变化及估值重建。'};
+ x.rankReview.anchor='正式2026Q3已出；模型事实锚仍旧';
+ x.catalyst='正式Q3已发布，尚需完成盈利与现金核验；原成立条件：'+x.catalyst;
+}
+const hd=by('002463');
+hd.fact='正式2026Q3（未经审计）：前三季收入232.2544亿元，归母56.2194亿元（+106.87%）、扣非54.7419亿元（+104.53%）、OCF27.0385亿元（−6.61%），基本EPS2.9214元、稀释EPS2.8918元；单季归母26.9858亿元。正式归母落在原预告54.5–57亿元内，不作为新增超预期。';
+hd.source='https://money.finance.sina.com.cn/corp/view/vCB_AllBulletinDetail.php?id=12664696&stockid=002463';
+hd.sources=[['2026Q3公司报告原文',hd.source]];hd.reportPeriod='2026-09-30';
+hd.verification='正式报关键字段已替换预告；现金下降与扩产需继续穿透，旧EPS4.6仍为待证假设。';
+hd.quarterReview.status='正式报字段已替换；完整估值未重做';
+hd.quarterReview.fields={'财报字段':hd.fact,'定价限制':hd.verification};
+hd.analysis={...hd.analysis,quality:hd.fact,bridge:['旧EPS3.6/4.6/5.4仅作情景对照，尚未由本季经营数据重建。'],basis:hd.verification,verdict:'产品需求与利润高增，现金未同幅兑现；等待分业务盈利、应收库存与资本开支核验。'};
+hd.rankReview.anchor='2026Q3正式报告字段';hd.rankReview.pricing=hd.verification;
+hd.rankReview.reason='正式Q3确认收入与利润增长，经营现金未同幅增长；等待扩产回报与回款，保留C级研究候选。';
+hd.model.why='已替换正式Q3字段；旧EPS3.6/4.6/5.4和PE仅为待证对照，未由本季数据重建，不作为本季已核验买价。';
+hd.model.evidenceUrl=hd.source;hd.model.reference=hd.verification;
+const waits={
+ '00700':{anchor:'2026Q2',next:'2026-11-18',reason:'等待11月18日正式Q3及含预付款的现金验证'},
+ '02057':{anchor:'2026Q2',next:'2026-11-18',reason:'北京时间11月18日业绩会，等待单票利润与现金'},
+ '09988':{anchor:'截至2026-06-30季度',next:null,reason:'下一集团季度业绩日期未确认；等待新正式报及现金验证'},
+ '01193':{anchor:'2026H1集团报表',next:null,reason:'集团新报日期未确认；附属重庆燃气Q3不能代替集团现金验证'}
+};
+const holdReasons={
+ '600406':'利润与现金门槛未满足', '605499':'预测年度、股本与盈利基准待重建',
+ '000333':'汇兑/套保及股东现金桥接待核','02328':'合并归母权益与单体Q3资本口径待核',
+ '600900':'预测年度与来水情景待核','603195':'盈利失速后基准待证','600690':'利润/回款恢复未验证',
+ '600096':'价差与采购占款待证','002318':'主业盈利和现金未恢复','002555':'恢复EPS不能作为当前基准',
+ '603993':'OCF/归母约56%低于原80%门槛，矿山与贸易现金待拆',
+ '000568':'滚动现金不足，现金恢复前仅观察',
+ '002028':'专题关注区已同步；交付、利润率及归母现金条件仍待验证'
+};
+for(const x of r.assets){
+ const wait=waits[x.code];if(wait)x.nextDisclosure=wait;
+ const reason=x.bankReconciliation?'银行BPS仅为敏感性，股息及普通股权益对账未完成':
+  x.kind==='ETF'?'Q3前十权重和绝对价值尚未重算':
+  x.quarterReview.depth==='disclosure'?'仅核正式报披露，旧估值尚未复核':
+  wait?wait.reason:holdReasons[x.code]||
+  (x.validation?.priceGrade==='原买价依据偏弱'?'旧价依据偏弱，完整现金证据待补':null);
+ x.executionHold=!!reason;x.executionHoldReason=reason||null;x.conditionStatus='pending';
+ x.valuationStatus=x.bankReconciliation?'sensitivity':x.executionHold?'reference':'conditional';
+ x.modelReviewedAt=x.code==='002028'?'2026-10-29':x.bankReconciliation?'2026-10-30':'2026-10-23';
+ x.modelReviewDueAt=wait?.next||r.reviewDueAt;
+ x.model.forecastYear=x.model.forecastYear??null;
+ x.model.valuationDate=x.model.valuationDate||x.modelReviewedAt;
+ x.model.targetDate=x.model.targetDate||null;
+ x.model.timeBasis=x.model.targetDate?'dated-horizon':x.model.type==='pb'?'present':x.kind==='ETF'?'historical-basket':'unconfirmed';
+}
+r.portfolio.changes='15核心及权重保留；公牛/海尔/云天化降C，久立降D，分组排序已修复；紫金补研置于洛钼之前。组内顺序是补研安排，不是预期收益或胜率排名。';
+r.excludedReview.method='使用独立B/C/D等级字段排序；本轮调整的组内顺序见报告，未重研项目之间保留旧相对顺序。排序日期和财务证据日期分别记录。';
+r.version='4.6-consistent-review';
+
 }
