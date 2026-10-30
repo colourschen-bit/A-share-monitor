@@ -56,6 +56,7 @@ assert.equal(run(`(()=>{const x=state.find(x=>x.code==='600941'),v=value(x);retu
 for(const [override,pattern]of [["gate:'failed',quote:{price:1,time:'20261030150000'}",/失效/],["quote:{price:1,time:'20991030150000'}",/日期无效/],["quote:null",/缺有效行情/],["modelReviewDueAt:'2026-10-30'",/复核日/]])assert.match(run(`buyState({...state[0],${override}})[0]`),pattern);
 assert.equal(run("modelIsDue({...state[0],modelReviewDueAt:'2027-01-30'},'2027-01-29')"),false);
 assert.equal(run("modelIsDue({...state[0],modelReviewDueAt:'2027-01-30'},'2027-01-30')"),true);
+assert.match(by('002028').quarterReview.status,/已同步/);assert.ok(!by('002028').audit.missing.includes('尚未同步'));
 assert.equal(r.window,undefined);assert.equal(by('00700').modelReviewDueAt,'2026-11-18');
 // Present value is the threshold, not Tencent's 416 CNY terminal assumption.
 assert.equal(run("signal({...state.find(x=>x.code==='00700'),market:'SH',quote:{price:405,time:'20261030150000'}})[0]"),'有溢价');

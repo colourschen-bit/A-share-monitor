@@ -149,10 +149,10 @@ const entries={
   },
   "002028": {
     "name": "思源电气",
-    "status": "必须同步专题模型",
+    "status": "专题已同步，现金条件待验",
     "fields": {
       "披露与财务事实": "Q3营收177.62亿元（+28.46%）、归母24.03亿元（+9.66%）、扣非23.15亿元（+13.69%）；OCF9.83亿元、购建支出6.91亿元。10月29日专题已补历史重估、业务结构、思源东芝归属及TTM现金。",
-      "模型修改": "看板旧97.51–108.98元区间尚未同步专题。采用专题2027模型：EPS4.58/5.83/7.05元、16/21/25倍，期末价格约73/123/176元；10月28日基准现值约110元、条件观察区90–98元。今日101.97元未进入该新区间。",
+      "模型修改": "已将旧97.51–108.98元区间同步为专题90–98元条件关注区。采用专题2027模型：EPS4.58/5.83/7.05元、16/21/25倍，期末价格约73/123/176元；10月28日基准现值约110元、条件观察区90–98元。今日101.97元未进入该新区间。",
       "反馈与预期差": "低毛利储能/EPC增长会稀释订单对利润的传导；海外增长与全球扩产都已公开，不再以AI电力尚未被认识立论。行业共识正确仍可能回报不足。",
       "成立/失效及下一核验": "按专题固定收入/利润率/增量ROE/资金成本，与2026年报现金、2027H1利润及海外交付核验；新厂H2投产不能按全年满产。单季现金比例不替代TTM及归母现金。"
     },
@@ -736,10 +736,15 @@ for(const x of r.assets){
  const wait=waits[x.code];if(wait)x.nextDisclosure=wait;
  const reason=x.bankReconciliation?'银行BPS仅为敏感性，股息及普通股权益对账未完成':
   x.kind==='ETF'?'Q3前十权重和绝对价值尚未重算':
-  x.quarterReview.depth==='disclosure'?'仅核正式报披露，旧估值尚未复核':
+  x.quarterReview.depth==='disclosure'?(x.code==='002463'?'正式报字段已更新，完整估值未重建':'仅核正式报披露，旧估值尚未复核'):
   wait?wait.reason:holdReasons[x.code]||
   (x.validation?.priceGrade==='原买价依据偏弱'?'旧价依据偏弱，完整现金证据待补':null);
  x.executionHold=!!reason;x.executionHoldReason=reason||null;x.conditionStatus='pending';
+ if(x.quarterReview.depth==='detailed'){
+  x.audit.done='本季财报关键字段及新旧假设对照已记录。'+(x.code==='002028'?'专题现值、2027情景与90–98元区间已同步。':x.bankReconciliation?'Q3 BPS敏感性已更新。':'');
+  x.audit.missing=reason||'完整现金/资产归属估值及未来经营成立条件仍待验证；旧盈利模型的预测年度和目标日待明确。';
+ }
+ if(x.code==='002463')Object.assign(x.audit,{stage:'正式报字段已更新，完整估值待重建',done:'正式Q3收入、归母/扣非、OCF及EPS字段已替换预告。',missing:'分部盈利与现金、资本开支回报及估值重建。'});
  x.valuationStatus=x.bankReconciliation?'sensitivity':x.executionHold?'reference':'conditional';
  x.modelReviewedAt=x.code==='002028'?'2026-10-29':x.bankReconciliation?'2026-10-30':'2026-10-23';
  x.modelReviewDueAt=wait?.next||r.reviewDueAt;
