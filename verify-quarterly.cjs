@@ -1,7 +1,7 @@
 'use strict';
 // Behavioural regressions from the 2026-10-30 independent consistency review.
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
-class ReviewClock extends Date{constructor(...args){super(...(args.length?args:['2026-10-30T13:00:00Z']));}static now(){return new ReviewClock().getTime();}}
+class ReviewClock extends Date{constructor(...args){super(...(args.length?args:['2026-11-01T05:00:00Z']));}static now(){return new ReviewClock().getTime();}}
 const html=fs.readFileSync('index.html','utf8');
 const layers=Array.from(html.matchAll(/<script src="([^?]+)\?/g),m=>m[1]);
 const nodes={};for(const m of html.matchAll(/id="([^"]+)"/g))nodes[m[1]]={value:'',innerHTML:'',textContent:'',options:[{},{},{}],showModal(){},close(){},remove(){}};
@@ -43,20 +43,21 @@ assert.match(by('002463').fact,/正式2026Q3/);assert.match(by('002463').fact,/5
 assert.equal(by('002463').reportPeriod,'2026-09-30');assert.ok(by('002463').executionHold);assert.match(by('002463').model.why,/未由本季数据重建/);
 // All bank prices remain non-executable sensitivities, even inside the interval.
 for(const [code,bps,low,high]of [['600036',46.87,35.85555,40.07385],['002142',37.12,29.696,33.408],['601838',21.98,17.584,19.782],['601009',16.01,10.8868,12.24765]]){
- near(by(code).model.inputs[1],bps);assert.equal(by(code).bankReconciliation.status,'pending');
+ near(by(code).model.inputs[1],bps);assert.equal(by(code).bankReconciliation.status,code==='600036'?'reconciled':'pending');
  const v=run(`value(state.find(x=>x.code==='${code}'))`);near(v.lo,low);near(v.hi,high);
- assert.match(run(`(()=>{const x=state.find(x=>x.code==='${code}'),v=value(x);return buyState({...x,gate:'verified',conditionStatus:'verified',quote:{price:(v.lo+v.hi)/2,time:'20261030150000'}})[0]})()`),/暂不启用.*股息/);
+ const bankState=run(`(()=>{const x=state.find(x=>x.code==='${code}'),v=value(x);return buyState({...x,gate:'verified',conditionStatus:'verified',quote:{price:(v.lo+v.hi)/2,time:'20261030150000'}})[0]})()`);
+ if(code==='600036')assert.equal(bankState,'价格与条件均达标');else assert.match(bankState,/暂不启用.*股息/);
  if(by(code).additionReview?.bank)near(by(code).additionReview.bank.modelBps,bps);
 }
 same(plain(by('600036').model.inputs),[42,46.87,48]);
 // Gate restrictions survive quotes and unrelated condition switches.
 for(const code of ['00700','02057','09988','01193','603993','000568','002463'])assert.match(run(`(()=>{const x=state.find(x=>x.code==='${code}'),v=value(x),fx=x.market==='HK'?research.hkdCny:1;return buyState({...x,gate:'verified',conditionStatus:'verified',quote:{price:(v.lo+v.hi)/2/fx,time:'20261030150000'}})[0]})()`),/暂不启用/);
-assert.match(run(`(()=>{const x=state.find(x=>x.code==='600941'),v=value(x);return buyState({...x,quote:{price:(v.lo+v.hi)/2,time:'20261030150000'}})[0]})()`),/条件待核验/);
-assert.equal(run(`(()=>{const x=state.find(x=>x.code==='600941'),v=value(x);return buyState({...x,gate:'verified',conditionStatus:'verified',quote:{price:(v.lo+v.hi)/2,time:'20261030150000'}})[0]})()`),'价格与条件均达标');
+assert.match(run(`(()=>{const x=state.find(x=>x.code==='600938'),v=value(x);return buyState({...x,quote:{price:(v.lo+v.hi)/2,time:'20261030150000'}})[0]})()`),/条件待核验/);
+assert.equal(run(`(()=>{const x=state.find(x=>x.code==='600938'),v=value(x);return buyState({...x,gate:'verified',conditionStatus:'verified',quote:{price:(v.lo+v.hi)/2,time:'20261030150000'}})[0]})()`),'价格与条件均达标');
 for(const [override,pattern]of [["gate:'failed',quote:{price:1,time:'20261030150000'}",/失效/],["quote:{price:1,time:'20991030150000'}",/日期无效/],["quote:null",/缺有效行情/],["modelReviewDueAt:'2026-10-30'",/复核日/]])assert.match(run(`buyState({...state[0],${override}})[0]`),pattern);
 assert.equal(run("modelIsDue({...state[0],modelReviewDueAt:'2027-01-30'},'2027-01-29')"),false);
 assert.equal(run("modelIsDue({...state[0],modelReviewDueAt:'2027-01-30'},'2027-01-30')"),true);
-assert.match(by('002028').quarterReview.status,/已同步/);assert.ok(!by('002028').audit.missing.includes('尚未同步'));
+assert.match(by('002028').coreEvidence.status,/专题保留/);assert.ok(!by('002028').audit.missing.includes('尚未同步'));
 assert.equal(r.window,undefined);assert.equal(by('00700').modelReviewDueAt,'2026-11-18');
 // Present value is the threshold, not Tencent's 416 CNY terminal assumption.
 assert.equal(run("signal({...state.find(x=>x.code==='00700'),market:'SH',quote:{price:405,time:'20261030150000'}})[0]"),'有溢价');
@@ -91,4 +92,45 @@ for(const [,code,lo,hi,currency]of reportRows){const x=by(code),fx=currency==='H
 
 // Rendered counts track data changes, rather than mirroring a hardcoded headline.
 run("state[0].quarterReview={...state[0].quarterReview,depth:'disclosure'};render()");assert.match(nodes.stats.innerHTML,/37\/61项/);assert.match(nodes.stats.innerHTML,/24项/);
+// Historical CNY cells must never be translated through the HKD conversion rate.
+for(const x of core){
+ const row=nodes.validationRows.innerHTML.match(new RegExp('<tr[^>]*data-code="'+x.code+'"[^>]*>(.*?)</tr>'))[1];
+ const cells=Array.from(row.matchAll(/<td[^>]*>(.*?)<\/td>/g),m=>m[1]);
+ const fx=x.market==='HK'?x.previousReview.fx:1;
+ const historical=x.previousReview.zone.map(n=>(n/fx).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2})).join('–');
+ assert.equal(cells[1],historical+(x.market==='HK'?' HKD':' CNY'));
+}
+for(const x of core.filter(x=>x.model.multiples))near(run(`(()=>{const x=state.find(x=>x.code==='${x.code}');return impliedInput(x,value(x).pv)})()`),x.model.inputs[1]);
+near(run("impliedInput(state.find(x=>x.code==='605499'),108)"),108*Math.sqrt(1.12)/18);
+// Independent accounting and execution regressions for the Nov 1 evidence pass.
+assert.equal(r.coreEvidence.total,15);assert.equal(core.filter(x=>x.coreEvidence).length,15);
+for(const x of core){
+ const e=x.coreEvidence;assert.equal(e.date,'2026-11-01');assert.ok(e.resolved.length>=2&&e.missing.length>=2&&e.sources.length);
+ assert.equal(x.gate,'pending');assert.equal(x.conditionStatus,'pending');
+ run(`openDetail(state.find(x=>x.code==='${x.code}'))`);
+ assert.match(nodes.dBody.innerHTML,/买价证据/);assert.match(nodes.dBody.innerHTML,/仍需证据/);
+ if(x.model.type==='pb')assert.doesNotMatch(run(`cashHurdleText(state.find(x=>x.code==='${x.code}'))`),/反向现金/);
+ if(x.executionHold){const v=run(`value(state.find(x=>x.code==='${x.code}'))`);assert.match(run(`buyState({...state.find(x=>x.code==='${x.code}'),gate:'verified',conditionStatus:'verified',quote:{price:${(v.lo+v.hi)/2/(x.market==='HK'?r.hkdCny:1)},time:'20261030150000'}})[0]`),/暂不启用/);}
+}
+for(const [code,total]of [['000333',269.28249],['600900',420.0476677808],['605499',45.9213738642],['600406',30.8401499708]]){const t=by(code).coreEvidence.ttm;near(t.ocf-t.capex,total);}
+const nari=by('600406').coreEvidence.cashBridge;
+near(nari.start+nari.inflows+nari.purchases+nari.employees+nari.taxes+nari.other,nari.end);
+// Compute from the original disclosed CNY values, independently of the stored bridge.
+near(by('605499').model.inputs[1],(3850956651.20+644312657.10)/734199310);
+near(by('600900').model.inputs[1],(26343828523.43+6309934681.44)/24468217716);
+near(run("value(state.find(x=>x.code==='605499')).lo"),85.3923743280192);
+near(run("value(state.find(x=>x.code==='605499')).hi"),95.80607851436301);
+near(run("value(state.find(x=>x.code==='600900')).lo"),20.36546910544224);
+near(run("value(state.find(x=>x.code==='600900')).hi"),22.042625384713958);
+for(const code of ['605499','600900']){assert.equal(by(code).model.forecastYear,2026);assert.equal(by(code).model.targetDate,null);assert.match(run(`scenarioReturnText(state.find(x=>x.code==='${code}'))`),/不计远期收益/);}
+near((1381986-199989)/25220,46.86744647105472);
+assert.match(by('600036').bankReconciliation.convention,/含权/);assert.equal(by('600036').executionHold,false);
+assert.match(run("bankBridgeText(state.find(x=>x.code==='600036'))"),/不重复扣/);
+assert.equal(by('600941').executionHold,true);assert.equal(by('603444').executionHold,true);
+near(ctx.window.CORE_EVIDENCE_MATH.cashIntermediate(by('603444').coreEvidence.cashData),17.9921148827);
+assert.match(run("evidenceCashText(state.find(x=>x.code==='603444'))"),/负购建增益排除/);
+const evidenceReport=fs.readFileSync('CORE-EVIDENCE-2026-11-01.md','utf8');
+assert.equal((evidenceReport.match(/^## \d+\. /gm)||[]).length,15);
+for(const [code,zone]of [['605499','85.39–95.81'],['600900','20.37–22.04'],['600036','35.86–40.07']])assert.ok(evidenceReport.includes(zone+' CNY'),code+' report zone');
+console.log('PASS: Nov 1 / 15 evidence records; 4 independent TTM bridges; NARI payment reconciliation; 2 annual EPS/price bridges; CMB cum-dividend capital; negative capex excluded; future gates retained.');
 console.log('PASS: 61 asset/detail renders; 15 core/85% + 15% cash; 38 detailed + 23 disclosure; formal filing replacement; bank/FCF execution holds; present-value threshold; dated returns; dynamic safety/FX/counts; model deadlines; canonical 9/29/8 candidate ordering.');
