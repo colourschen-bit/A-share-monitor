@@ -50,21 +50,25 @@ function classify(ctx, asset, quote) {
       fxDate:research.hkdCnyDate || '见看板汇率说明'};
   })()`, ctx, {timeout:5000});
 }
+function alertAssets(ctx) { return [...ctx.assets]; }
 async function main() {
   const ctx = loadResearch(), now = new Date();
-  const assets = ctx.assets.filter(x => x.portfolio?.included);
+  const assets = alertAssets(ctx);
   const rows = [], skipped = [];
-  for (const asset of assets) {
+  // Limit concurrency so the full research pool fits comfortably in the workflow timeout.
+  for (let offset = 0; offset < assets.length; offset += 5) {
+    await Promise.all(assets.slice(offset, offset + 5).map(async asset => {
     try {
       const response = await fetch('https://qt.gtimg.cn/q=' + asset.key, {signal:AbortSignal.timeout(12000)});
       if (!response.ok) throw Error('Quote HTTP ' + response.status);
       const text = new TextDecoder('gbk').decode(await response.arrayBuffer());
-      const quote = parseQuote(text, asset.key, now);
+      const quote = parseQuote(text, asset.key, new Date());
       const row = classify(ctx, asset, quote);
       if (row) rows.push(row); else skipped.push({key:asset.key, reason:'模型缺失、已到复核日、论点失效或区间无效'});
     } catch (e) { skipped.push({key:asset.key, reason:e.message}); }
+    }));
   }
-  process.stdout.write(JSON.stringify({checkedAt:now.toISOString(), rows, skipped}));
+  process.stdout.write(JSON.stringify({checkedAt:now.toISOString(), total:assets.length, rows, skipped}));
 }
-module.exports = {loadResearch, parseQuote, classify};
+module.exports = {loadResearch, parseQuote, classify, alertAssets};
 if (require.main === module) main().catch(e => {console.error(e.message); process.exitCode=1;});

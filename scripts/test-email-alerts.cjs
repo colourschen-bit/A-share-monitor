@@ -1,9 +1,14 @@
 'use strict';
 const assert = require('node:assert/strict');
-const {loadResearch, parseQuote, classify} = require('./alert-quotes.cjs');
+const {loadResearch, parseQuote, classify, alertAssets} = require('./alert-quotes.cjs');
 const ctx = loadResearch();
 assert.equal(ctx.assets.length, 61);
 assert.equal(ctx.assets.filter(x => x.portfolio.included).length, 15);
+const monitored = alertAssets(ctx);
+assert.equal(monitored.length, ctx.assets.length);
+assert.equal(monitored.filter(x => !x.portfolio.included).length, 46);
+assert.ok(monitored.some(x => x.kind === 'ETF'));
+assert.equal(alertAssets({assets:[...ctx.assets,{key:'future-candidate',portfolio:{included:false}}]}).length,62);
 const now = new Date('2026-11-05T06:05:00Z');
 function response(key, time, p=20) {
   const a = Array(50).fill(''); a[2]=key.replace(/^[a-z]+/,''); a[3]=p; a[30]=time;

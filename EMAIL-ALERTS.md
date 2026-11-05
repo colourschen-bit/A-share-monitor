@@ -1,6 +1,6 @@
 # Gmail 价格提醒
 
-复用当前 index.html 中的数据加载顺序及 app.js 的 value / executionText；默认只检查15只核心。网页关闭也能检查，不需要 Google 表格或 Apps Script。
+复用当前 index.html 中的数据加载顺序及 app.js 的 value / executionText；检查主看板全部61项（15只核心＋46项候选，包含ETF），后续新增标的自动纳入。网页关闭也能检查，不需要 Google 表格或 Apps Script。
 
 ## 启用（只操作一次）
 
