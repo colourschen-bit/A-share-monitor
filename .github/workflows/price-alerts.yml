@@ -1,0 +1,53 @@
+name: Price alerts to Gmail
+on:
+  schedule:
+    # UTC 06:05 = Beijing 14:05, Monday-Friday. GitHub may delay schedules.
+    - cron: '5 6 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'test sends a connection email; check checks current quotes; dry-run sends nothing'
+        type: choice
+        options: [dry-run, test, check]
+        default: dry-run
+permissions:
+  contents: read
+concurrency:
+  group: price-alerts-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  monitor:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Restore previous signal observations
+        uses: actions/cache/restore@v4
+        with:
+          path: .alert-state
+          key: price-alerts-v1-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: price-alerts-v1-${{ github.ref_name }}-
+      - name: Check prices or send requested test
+        env:
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          ALERT_MODE: ${{ inputs.mode }}
+        run: |
+          case "$ALERT_MODE" in
+            test) python scripts/email-alerts.py --test-email ;;
+            dry-run) python scripts/email-alerts.py --dry-run ;;
+            *) python scripts/email-alerts.py ;;
+          esac
+      - name: Save observations after successful check
+        if: success() && (github.event_name == 'schedule' || inputs.mode == 'check')
+        uses: actions/cache/save@v4
+        with:
+          path: .alert-state
+          key: price-alerts-v1-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}
