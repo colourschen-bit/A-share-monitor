@@ -81,7 +81,7 @@ def main():
     for row in data['skipped']:
         print(f"Skip {row['key']}: {row['reason']}")
     day = datetime.now(ZoneInfo('Asia/Shanghai')).date().isoformat()
-    needs_summary = previous.get('_lastDigestDate') != day or (previous.get('_lastDigestUsable') == 0 and bool(data['rows']))
+    needs_summary = previous.get('_lastDigestDate') != day or (previous.get('_lastDigestUsable', 0) == 0 and bool(data['rows']))
     report = daily_report(data, events)
     if args.dry_run:
         print(report)
