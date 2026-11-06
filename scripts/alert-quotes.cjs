@@ -37,7 +37,8 @@ function parseQuote(text, key, now) {
   const date = new Intl.DateTimeFormat('sv-SE', {timeZone:'Asia/Shanghai'}).format(now);
   const closeHour = key.startsWith('hk') ? 16 : 15;
   const close = Date.parse(date + 'T' + closeHour + ':00:00+08:00');
-  const closing = now.getTime() >= close && stamp >= close - 10*60000 && stamp <= close + 5*60000;
+  const auctionMinutes = key.startsWith('hk') ? 10 : 5;
+  const closing = now.getTime() >= close && stamp >= close - 10*60000 && stamp <= close + auctionMinutes*60000;
   if (!Number.isFinite(stamp) || iso.slice(0,10) !== date || age < -120000 || (age > 20*60000 && !closing)) throw Error('Stale or future quote');
   return {price, time, source:'TENCENT', freshness:closing ? '当日收盘附近报价（非实时）' : '盘中报价（可能延迟）'};
 }

@@ -17,6 +17,7 @@ function response(key, time, p=20) {
 assert.equal(parseQuote(response('sh600036','20261105140500'),'sh600036',now).price,20);
 assert.equal(parseQuote(response('hk00700','2026/11/05 14:05:00'),'hk00700',now).time,'20261105140500');
 assert.equal(parseQuote(response('sh600036','20261105150000'),'sh600036',new Date('2026-11-05T12:00:00Z')).freshness,'当日收盘附近报价（非实时）');
+assert.equal(parseQuote(response('hk00700','2026/11/05 16:08:54'),'hk00700',new Date('2026-11-05T12:00:00Z')).freshness,'当日收盘附近报价（非实时）');
 assert.throws(()=>parseQuote(response('hk00700','2026/11/04 16:00:00'),'hk00700',new Date('2026-11-05T12:00:00Z')));
 for (const raw of [response('sh600036','20261104140500'),response('sh600036','20261105150000'),response('sh600036','20261105100000'),response('sh600036','20261105140500',0),response('sz000001','20261105140500')]) {
   assert.throws(()=>parseQuote(raw,'sh600036',now));

@@ -81,7 +81,7 @@ def main():
     for row in data['skipped']:
         print(f"Skip {row['key']}: {row['reason']}")
     day = datetime.now(ZoneInfo('Asia/Shanghai')).date().isoformat()
-    needs_summary = previous.get('_lastDigestDate') != day
+    needs_summary = previous.get('_lastDigestDate') != day or (previous.get('_lastDigestUsable') == 0 and bool(data['rows']))
     report = daily_report(data, events)
     if args.dry_run:
         print(report)
@@ -92,6 +92,7 @@ def main():
     if needs_summary:
         send_mail(f"A股看板日检 {day}：有效{len(data['rows'])}项 / 待检查{len(data['skipped'])}项", report)
         updated['_lastDigestDate'] = day
+        updated['_lastDigestUsable'] = len(data['rows'])
         print('SMTP accepted daily inspection email')
     elif events:
         send_mail(f'A股看板：{len(events)}项价格区间变化', body_for(events))
