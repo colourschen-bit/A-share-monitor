@@ -26,13 +26,20 @@ function loadResearch() {
 function parseQuote(text, key, now) {
   const match = text.match(/v_([a-z]+\d+)="([^"]*)"/);
   if (!match || match[1] !== key) throw Error('Quote symbol mismatch');
-  const a = match[2].split('~'), price = Number(a[3]), time = a[30];
-  if (a[2] !== key.replace(/^[a-z]+/, '') || !Number.isFinite(price) || price <= 0 || !/^\d{14}$/.test(time || '')) throw Error('Invalid quote fields');
+  const a = match[2].split('~'), price = Number(a[3]);
+  // Hong Kong feeds may use an unpadded code and YYYY/MM/DD HH:mm:ss.
+  const rawTime = a[30] || '';
+  if (!/^(\d{14}|\d{4}[/-]\d{2}[/-]\d{2} \d{2}:\d{2}:\d{2})$/.test(rawTime)) throw Error('Invalid quote time format');
+  const time = rawTime.replace(/\D/g, '');
+  if (!/^\d+$/.test(a[2] || '') || Number(a[2]) !== Number(key.replace(/^[a-z]+/, '')) || !Number.isFinite(price) || price <= 0) throw Error('Invalid quote fields');
   const iso = `${time.slice(0,4)}-${time.slice(4,6)}-${time.slice(6,8)}T${time.slice(8,10)}:${time.slice(10,12)}:${time.slice(12,14)}+08:00`;
   const stamp = Date.parse(iso), age = now.getTime() - stamp;
   const date = new Intl.DateTimeFormat('sv-SE', {timeZone:'Asia/Shanghai'}).format(now);
-  if (!Number.isFinite(stamp) || iso.slice(0,10) !== date || age < -120000 || age > 20*60000) throw Error('Stale or future quote');
-  return {price, time, source:'TENCENT'};
+  const closeHour = key.startsWith('hk') ? 16 : 15;
+  const close = Date.parse(date + 'T' + closeHour + ':00:00+08:00');
+  const closing = now.getTime() >= close && stamp >= close - 10*60000 && stamp <= close + 5*60000;
+  if (!Number.isFinite(stamp) || iso.slice(0,10) !== date || age < -120000 || (age > 20*60000 && !closing)) throw Error('Stale or future quote');
+  return {price, time, source:'TENCENT', freshness:closing ? '当日收盘附近报价（非实时）' : '盘中报价（可能延迟）'};
 }
 function classify(ctx, asset, quote) {
   ctx.asset = {...asset, quote};
@@ -43,7 +50,7 @@ function classify(ctx, asset, quote) {
     const p = price(x), fx = x.market === 'HK' ? research.hkdCny : 1;
     const bucket = p < v.lo ? 'below' : p <= v.hi ? 'zone' : p > v.pv ? 'above' : 'between';
     return {key:x.key, name:x.name, code:x.code, market:x.market, bucket,
-      price:x.quote.price, time:x.quote.time, source:x.quote.source,
+      price:x.quote.price, time:x.quote.time, source:x.quote.source, freshness:x.quote.freshness,
       low:v.lo/fx, high:v.hi/fx, reference:v.pv/fx,
       modelKey:JSON.stringify([v.lo,v.hi,v.pv,research.hkdCny,x.modelReviewDueAt]),
       condition:executionText(x), next:x.catalyst || '',

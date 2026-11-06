@@ -1,15 +1,18 @@
 name: Price alerts to Gmail
 on:
+  push:
+    branches: [main]
+    paths: ['scripts/alert-quotes.cjs', 'scripts/email-alerts.py', '.github/workflows/price-alerts.yml']
   schedule:
     # UTC 06:05 = Beijing 14:05, Monday-Friday. GitHub may delay schedules.
-    - cron: '5 6 * * 1-5'
+    - cron: '5,20,35 6 * * 1-5'
   workflow_dispatch:
     inputs:
       mode:
         description: 'test sends a connection email; check checks current quotes; dry-run sends nothing'
         type: choice
-        options: [dry-run, test, check]
-        default: dry-run
+        options: [check, dry-run, test]
+        default: check
 permissions:
   contents: read
 concurrency:
@@ -46,7 +49,7 @@ jobs:
             *) python scripts/email-alerts.py ;;
           esac
       - name: Save observations after successful check
-        if: success() && (github.event_name == 'schedule' || inputs.mode == 'check')
+        if: always() && !cancelled() && (github.event_name != 'workflow_dispatch' || inputs.mode == 'check')
         uses: actions/cache/save@v4
         with:
           path: .alert-state

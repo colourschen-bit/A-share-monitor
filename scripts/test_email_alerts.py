@@ -30,5 +30,20 @@ class Transitions(unittest.TestCase):
         for bucket in ['below','above']:
             self.assertEqual(len(alerts.transitions(state,[self.row(bucket)])[0]),1)
 
+    def test_daily_report_distinguishes_failure_from_no_signal(self):
+        text = alerts.daily_report({'total':61,'rows':[], 'skipped':[{'key':'hk00700','reason':'stale'}]}, [])
+        self.assertIn('未获得任何可用比较结果', text)
+        self.assertIn('hk00700', text)
+        self.assertNotIn('目前无关注区', text)
+
+    def test_daily_report_includes_existing_price_positions(self):
+        row = {**self.row('zone'), 'name':'测试','code':'600036','market':'SH',
+               'price':9,'time':'20261106140000','low':8,'high':9,'reference':10,
+               'condition':'条件待核验','next':'现金复核'}
+        text = alerts.daily_report({'total':1,'rows':[row],'skipped':[]},[])
+        self.assertIn('新增跨区：0', text)
+        self.assertIn('测试', text)
+        self.assertIn('条件待核验', text)
+
 if __name__ == '__main__':
     unittest.main()
