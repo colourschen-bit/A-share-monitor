@@ -2,7 +2,7 @@ name: Price alerts to Gmail
 on:
   push:
     branches: [main]
-    paths: ['scripts/alert-quotes.cjs', 'scripts/email-alerts.py', '.github/workflows/price-alerts.yml']
+    paths: ['scripts/alert-quotes.cjs', 'scripts/email-alerts.py', '.github/workflows/price-alerts.yml', '.github/price-alert-dispatch.json']
   schedule:
     # UTC 06:05 = Beijing 14:05, Monday-Friday. GitHub may delay schedules.
     - cron: '5,20,35 6 * * 1-5'
