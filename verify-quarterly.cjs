@@ -3,7 +3,8 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 class ReviewClock extends Date{constructor(...args){super(...(args.length?args:['2026-11-01T05:00:00Z']));}static now(){return new ReviewClock().getTime();}}
 const html=fs.readFileSync('index.html','utf8');
-const layers=Array.from(html.matchAll(/<script src="([^?]+)\?/g),m=>m[1]);
+// Preserve Nov 1 behavioural regressions as a historical baseline; current full stack is checked separately.
+const layers=Array.from(html.matchAll(/<script src="([^?]+)\?/g),m=>m[1]).filter(f=>!f.startsWith('full-review-'));
 const nodes={};for(const m of html.matchAll(/id="([^"]+)"/g))nodes[m[1]]={value:'',innerHTML:'',textContent:'',options:[{},{},{}],showModal(){},close(){},remove(){}};
 nodes.tier.value='all';
 const ctx={window:{},console,Intl,Date:ReviewClock,setTimeout:()=>1,clearTimeout(){},document:{getElementById:id=>nodes[id]||null,createElement:()=>({}),body:{appendChild(){}}}};
@@ -134,3 +135,4 @@ assert.equal((evidenceReport.match(/^## \d+\. /gm)||[]).length,15);
 for(const [code,zone]of [['605499','85.39–95.81'],['600900','20.37–22.04'],['600036','35.86–40.07']])assert.ok(evidenceReport.includes(zone+' CNY'),code+' report zone');
 console.log('PASS: Nov 1 / 15 evidence records; 4 independent TTM bridges; NARI payment reconciliation; 2 annual EPS/price bridges; CMB cum-dividend capital; negative capex excluded; future gates retained.');
 console.log('PASS: 61 asset/detail renders; 15 core/85% + 15% cash; 38 detailed + 23 disclosure; formal filing replacement; bank/FCF execution holds; present-value threshold; dated returns; dynamic safety/FX/counts; model deadlines; canonical 9/29/8 candidate ordering.');
+
