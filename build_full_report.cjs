@@ -1,6 +1,6 @@
 'use strict';
 const fs=require('fs'),vm=require('vm');const c={window:{}};vm.createContext(c);
-const layers=[...fs.readFileSync('index.html','utf8').matchAll(/<script src="([^?]+)\?/g)].map(x=>x[1]).filter(x=>x!=='app.js'&&!x.startsWith('full-review-'));
+const layers=[...fs.readFileSync('index.html','utf8').matchAll(/<script src="([^?]+)\?/g)].map(x=>x[1]).filter(x=>x!=='app.js'&&!x.startsWith('full-review-')&&!x.startsWith('tencent-review-'));
 for(const f of [...layers,'full-review-2026-11-11.js'])vm.runInContext(fs.readFileSync(f,'utf8'),c);
 const r=c.window.RESEARCH,assets=r.assets.slice().sort((a,b)=>a.portfolio.rank-b.portfolio.rank),f=v=>Number.isFinite(v)?v.toFixed(2):'未提供';
 const band=x=>{const m=x.model,b=m.type==='lookthrough'?m.cases[1]:m.inputs[1]*m.multiples[1]+m.extra[1],pv=m.reviewBuyZone?m.reviewValueToday:m.type==='lookthrough'?b:b/Math.pow(1.12,m.discountYears??.5),z=m.reviewBuyZone||(m.type==='lookthrough'?m.buyZone:[pv*(1-m.margin[0]),pv*(1-m.margin[1])]),fx=x.market==='HK'?r.hkdCny:1;return z.map(v=>f(v/fx)).join('–')+(x.market==='HK'?' HKD':' CNY');};

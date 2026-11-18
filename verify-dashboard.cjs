@@ -4,3 +4,5 @@ require('./verify-quarterly.cjs');
 
 
 require('./verify-full-review.cjs');
+
+require('./verify-tencent-review.cjs');

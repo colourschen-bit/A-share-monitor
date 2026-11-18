@@ -10,6 +10,7 @@ const pct=n=>Number.isFinite(n)?(n>=0?'+':'')+(n*100).toFixed(0)+'%':'—';
 const digits=x=>x.kind==='ETF'?3:2;
 function cases(x){
  const m=x.model;if(!m)return null;
+ if(m.type==='cash-dcf')return x.tencentReview.scenarios.map(z=>z.pv);
  if(m.type==='lookthrough')return m.cases;
  if(m.type==='index')return m.fair.map((v,i)=>m.anchorNav*(v/m.currentMetric)*m.fundamental[i]);
  return m.inputs.map((v,i)=>m.type==='fcf'?v/m.yields[i]+m.extra[i]:v*m.multiples[i]+m.extra[i]);
@@ -30,6 +31,7 @@ function modelIsDue(x,today=chinaToday()){return !!x.modelReviewDueAt&&today>=x.
 function reviewCounts(assets=state){return {detailed:assets.filter(x=>x.quarterReview?.depth==='detailed').length,disclosure:assets.filter(x=>x.quarterReview?.depth==='disclosure').length,total:assets.length};}
 function timeLabel(x){
  if(x.model.targetDate)return '目标日 '+x.model.targetDate+' / 盈利年度 '+(x.model.forecastYear||'待确认');
+ if(x.model.timeBasis==='cash-dcf')return '五年现金情景现值 / '+x.model.valuationDate;
  if(x.model.timeBasis==='earnings-year')return x.model.forecastYear+'年度盈利情景；退出日未设';
  if(x.model.timeBasis==='normalized')return '正常化年度盈利参照；非指定年度预测';
  if(x.model.timeBasis==='present')return '净资产现值情景 / '+x.model.valuationDate;
@@ -58,6 +60,7 @@ function bankBridgeText(x){
  return 'Q3普通股BPS '+fmt(b.reportedBps,2)+'元；股息及权益对账'+(b.status==='pending'?'未完成':'已完成')+'。压力/基准/修复BPS：'+x.model.inputs.map(n=>fmt(n,3)).join(' / ')+'元。当前区间仅作敏感性；未额外扣减不代表股息已核清。';
 }
 function evidenceCashText(x){
+ if(x.tencentReview){const a=x.tencentReview.actual;return 'Q3实际FCF '+fmt(a.q3.fcf*10,0)+'亿元；TTM约 '+fmt((a.q4PriorFcf+a.q1Fcf+a.q2.fcf+a.q3.fcf)*10,0)+'亿元；公司合并口径';}
  const e=x.coreEvidence,c=e?.ttm||e?.cashData;if(!c)return x.model.type==='pb'?'资本/持续ROE口径':'公司专用现金口径，见详情';
  const v=window.CORE_EVIDENCE_MATH.cashIntermediate(c);
  return c.period+'：'+fmt(v,2)+'亿元；'+(c.excludeNegativeCapex?'负购建增益排除；':'')+'非FCFE';
@@ -68,7 +71,7 @@ function cashHurdleText(x){
  return '反向现金要求：若全部价值仅来自稳态股东可分配现金、要求回报'+fmt(e.requiredReturn*100)+'%、长期增长'+fmt(e.longGrowth*100)+'%，当前模型区间需要下一年现金约'+fmt(v.lo*spread,2)+'–'+fmt(v.hi*spread,2)+'元/股。公式 P×(r−g)。这是稳态条件检验，非本轮FCFE预测、独立DCF或买价；尚未计超额资产，不可用九个月合并差额直接比较。';
 }
 function evidenceDetail(x){
- const e=x.coreEvidence;if(!e)return '';
+ const e=x.coreEvidence;if(!e||x.tencentReview)return '';
  let h='<section class="section audit"><h3>买价证据 · '+e.date+' · '+escapeHTML(e.priceStatus)+'</h3><p><b>本轮补齐：</b>'+escapeHTML(e.resolved.join(' '))+'</p>';
  for(const [label,key]of [['财报事实','fact'],['现金/资本归属','cash'],['定价推导','pricing'],['独立假设与反馈','assumptions']])h+='<p><b>'+label+'：</b>'+escapeHTML(e[key])+'</p>';
  if(e.ttmData){const t=e.ttmData;h+='<p><b>滚动现金复算（亿元）：</b>OCF '+fmt(t.ocf[0],4)+' − '+fmt(t.ocf[1],4)+' ＋ ('+fmt(t.ocf[2],4)+') = '+fmt(e.ttm.ocf,4)+'；TTM按2025全年−2025同期＋2026同期。购建 '+fmt(t.capex[0],4)+' − '+fmt(t.capex[1],4)+' ＋ '+fmt(t.capex[2],4)+' = '+fmt(e.ttm.capex,4)+'；差额 '+fmt(e.ttm.ocf-e.ttm.capex,4)+'，仍未完成利息/租赁/少数权益归属。</p>';}
@@ -96,6 +99,7 @@ function signal(x){
  if(x.gate==='failed')return ['暂不估值','bad','论点失效，须重建模型'];
  const wait=x.nextDisclosure;
  const reference=(wait?'财报锚 '+wait.anchor+'；'+wait.reason+'；':'')+executionText(x)+'；'+(dated!==today?'按 '+dated+' 报价作历史比较，非实时判断；':'');
+ if(x.tencentReview&&x.executionHold&&p<=v.hi)return [p<v.lo?'低于试算区，须排查风险':'试算达区，暂不建仓','pending',reference+'经营和现金门槛未通过'];
  if(p<=v.hi)return ['有折价','watch',reference+(p<v.lo?'低于关注区下沿，先检查是否遗漏风险':'价格不高于条件关注区上沿')];
  if(p>v.pv)return ['有溢价','reduce',reference+'高于模型基准现值／对照值，不自动构成卖点'];
  return ['接近估值','hold',reference+'高于关注区上沿，不高于模型基准现值／对照值'];
@@ -111,6 +115,7 @@ function formula(x,i){
   return '固定复核净值 '+fmt(m.anchorNav,4)+' × 修复系数 '+fmt(m.cases[2]/m.anchorNav,2);
  }
  if(m.type==='index')return '锚定净值 '+fmt(m.anchorNav,4)+' × 合理'+m.metric+' '+fmt(m.fair[i],2)+' ÷ 当前'+m.metric+' '+fmt(m.currentMetric,2)+' × 基本面系数 '+fmt(m.fundamental[i],2);
+ if(m.type==='cash-dcf'){const a=x.tencentReview.scenarios[i];return '（前五年现金现值 '+fmt(a.operations,1)+' + 终值现值 '+fmt(a.terminal,1)+' + 上市投资折算 '+fmt(a.portfolio,1)+'）十亿元 ÷ '+x.tencentReview.shares+'十亿股';}
  if(m.type==='fcf')return fmt(m.inputs[i],1)+'元FCFE ÷ '+fmt(m.yields[i]*100,1)+'% + '+m.extra[i]+'元投资折价值';
  const label=m.type==='pb'?'BPS':m.type==='opat'?'营运EPS':'EPS';
  return label+' '+fmt(m.inputs[i],2)+'元 × '+fmt(m.multiples[i],2)+(m.extra[i]?' + '+m.extra[i]+'元期权':'');
@@ -190,9 +195,13 @@ function openDetail(x){
  $('dCode').textContent=x.market+x.code+' · 6–18月投资期 / 3–6月经营核验 · 全部估值为人民币';
  $('dName').textContent=x.name;
  let body='<div class="audit">价格判断：'+signal(x)[0]+'（'+escapeHTML(signal(x)[2])+'）；报价时间：'+escapeHTML(x.quote?.time||'缺失')+'；研究进度：'+escapeHTML(progress(x))+'；经营兑现：'+fulfillment(x)+'。研究完成与未来催化兑现是两回事。折价不自动等于买入，溢价不自动等于卖出。</div>';
- if(x.fullReview){const f=x.fullReview;body+='<section class="section audit"><h3>全池财报与宏观复核 · '+escapeHTML(f.date)+'</h3><p><b>披露口径：</b>'+escapeHTML(f.reportPeriod)+'</p><p>'+escapeHTML(f.facts)+'</p><p>'+escapeHTML(f.cash)+'</p><p><b>独立判断：</b>'+escapeHTML(f.judgment)+'</p><p><b>价格处理：</b>'+escapeHTML(f.priceDecision)+'</p><p><b>尚需证明：</b>'+escapeHTML(f.limitation)+'</p><p><a href="'+escapeHTML(f.source)+'" target="_blank" rel="noopener">财报/披露入口 ↗</a></p>'+(f.secondarySource?'<p><a href="'+escapeHTML(f.secondarySource)+'" target="_blank" rel="noopener">二手权重线索（未用于重估） ↗</a></p>':'')+'<a href="https://github.com/colourschen-bit/A-share-monitor/blob/main/FULL-REVIEW-2026-11-11.md" target="_blank" rel="noopener">本轮全池报告 ↗</a></section>';}
+ if(x.tencentReview){
+  const t=x.tencentReview,fx=research.hkdCny;
+  body+='<section class="section audit"><h3>腾讯2026Q3 · 新关注区 '+fmt(v.lo/fx,2)+'–'+fmt(v.hi/fx,2)+' HKD（暂不建仓）</h3><p>'+escapeHTML(t.strategy)+'</p><p><b>经营门槛：</b>'+escapeHTML(t.gate)+'</p><p><b>撤回条件：</b>'+escapeHTML(t.fail)+'</p><p>压力 / 基准 / 修复现值（HKD）：'+v.cases.map(n=>fmt(n/fx,2)).join(' / ')+'。压力值不是底价。</p><p>未来五年股东现金试算（人民币十亿元）：</p><ul>'+t.scenarios.map((z,i)=>'<li>'+scenarioNames[i]+'：'+z.flows.join(' → ')+'；要求回报 '+fmt(z.rate*100,0)+'%，永续增长 '+fmt(z.growth*100,1)+'%，上市投资计入 '+fmt(z.realization*100,0)+'%。</li>').join('')+'</ul><p>只改变基准要求回报：'+t.rateSensitivity.map(z=>fmt(z.rate*100,0)+'% → '+fmt(z.pv/fx,2)+' HKD').join('；')+'。非上市投资不计、净债务不重复扣；融资与少数权益等在现金里留有扣减，详见报告。</p><p><a href="'+escapeHTML(t.report)+'" target="_blank" rel="noopener">详细财报与现金模型 ↗</a></p></section>';
+ }
+ if(x.fullReview){const f=x.fullReview;body+='<section class="section audit"><h3>'+escapeHTML(f.report?'腾讯财报专项复核':'全池财报与宏观复核')+' · '+escapeHTML(f.date)+'</h3><p><b>披露口径：</b>'+escapeHTML(f.reportPeriod)+'</p><p>'+escapeHTML(f.facts)+'</p><p>'+escapeHTML(f.cash)+'</p><p><b>独立判断：</b>'+escapeHTML(f.judgment)+'</p><p><b>价格处理：</b>'+escapeHTML(f.priceDecision)+'</p><p><b>尚需证明：</b>'+escapeHTML(f.limitation)+'</p><p><a href="'+escapeHTML(f.source)+'" target="_blank" rel="noopener">财报/披露入口 ↗</a></p>'+(f.secondarySource?'<p><a href="'+escapeHTML(f.secondarySource)+'" target="_blank" rel="noopener">二手权重线索（未用于重估） ↗</a></p>':'')+'<a href="'+escapeHTML(f.report||'https://github.com/colourschen-bit/A-share-monitor/blob/main/FULL-REVIEW-2026-11-11.md')+'" target="_blank" rel="noopener">对应复核报告 ↗</a></section>';}
  body+=evidenceDetail(x);
- if(x.quarterReview){const q=x.quarterReview;body+='<section class="section audit"><h3>季度复核 · '+escapeHTML(q.date)+' · '+escapeHTML(q.status)+'</h3>'+Object.entries(q.fields).map(([k,v])=>'<p><b>'+escapeHTML(k)+'：</b>'+escapeHTML(v)+'</p>').join('')+(q.sources||[]).map(([label,url])=>'<p><a href="'+escapeHTML(url)+'" target="_blank" rel="noopener">'+escapeHTML(label)+'</a></p>').join('')+'<a href="https://github.com/colourschen-bit/A-share-monitor/blob/main/QUARTERLY-REVIEW-2026-10-30.md" target="_blank" rel="noopener">完整季度报告 ↗</a></section>';}
+ if(x.quarterReview){const q=x.quarterReview;body+='<section class="section audit"><h3>季度复核 · '+escapeHTML(q.date)+' · '+escapeHTML(q.status)+'</h3>'+Object.entries(q.fields).map(([k,v])=>'<p><b>'+escapeHTML(k)+'：</b>'+escapeHTML(v)+'</p>').join('')+(q.sources||[]).map(([label,url])=>'<p><a href="'+escapeHTML(url)+'" target="_blank" rel="noopener">'+escapeHTML(label)+'</a></p>').join('')+'<a href="'+escapeHTML(q.report||'https://github.com/colourschen-bit/A-share-monitor/blob/main/QUARTERLY-REVIEW-2026-10-30.md')+'" target="_blank" rel="noopener">完整季度报告 ↗</a></section>';}
  body+='<section class="section audit"><h3>执行限制与复核时点</h3><p>'+escapeHTML(executionText(x))+'</p><p>经营状态：'+escapeHTML(x.conditionStatus==='verified'?'已核验':'待核验')+'；模型复核日期 '+escapeHTML(x.modelReviewedAt)+'；下次最迟复核 '+escapeHTML(x.modelReviewDueAt)+'。投资持有期与模型复核期限分别管理。</p>'+(x.bankReconciliation?'<p>'+escapeHTML(bankBridgeText(x))+'</p>':'')+'</section>';
  if(x.rankReview){const z=x.rankReview;
   body+='<section class="section"><h3>候选排序核验 · 候选'+z.candidateRank+'/46 · 全池#'+x.portfolio.rank+'</h3><p>'+escapeHTML(x.portfolio.grade)+'；原全池#'+z.previousRank+'。'+escapeHTML(z.reason)+'</p><p>价格依据与缺口：'+escapeHTML(z.pricing)+'</p><p class="small">事实锚：'+escapeHTML(z.anchor)+'；证据日期：'+(z.evidenceDate||z.date)+'；排序复核：'+z.date+'。候选顺位不改变15只核心席位，也不代表当前可执行买入。</p></section>';
@@ -221,7 +230,7 @@ function openDetail(x){
  body+='<section class="section"><h3>当前独立判断</h3><p>'+escapeHTML(n.verdict)+'</p></section>';
  if(n.moat)body+='<section class="section"><h3>护城河与长期现金机制</h3><p>'+escapeHTML(n.moat)+'</p></section>';
  if(n.quality)body+='<section class="section"><h3>利润与现金质量</h3><p>'+escapeHTML(n.quality)+'</p></section>';
- if(n.bridge)body+='<section class="section"><h3>盈利 / 情景推导：事实锚点之后均为假设</h3><ul>'+n.bridge.map(t=>'<li>'+escapeHTML(t)+'</li>').join('')+'</ul></section>';
+ if(n.bridge?.length)body+='<section class="section"><h3>盈利 / 情景推导：事实锚点之后均为假设</h3><ul>'+n.bridge.map(t=>'<li>'+escapeHTML(t)+'</li>').join('')+'</ul></section>';
  body+='<section class="section"><h3>估值方法及参数依据</h3><p>'+escapeHTML(n.basis)+'</p></section>';
  body+='<section class="section"><h3>反身性 / 重叠风险</h3><p>'+escapeHTML(n.reflexivity||n.overlap)+'</p></section>';
  }
@@ -233,11 +242,11 @@ function openDetail(x){
   body+='<p class="audit">'+escapeHTML(timeLabel(x))+'；模型基准现值／对照值 '+fmt(v.pv,d)+'元，关注区 '+fmt(v.lo,d)+'–'+fmt(v.hi,d)+'元。</p>';
   body+='<section class="section"><h3>可复算情景：参数均为研究假设</h3><div class="grid">'+scenarioNames.map((n,i)=>'<div class="card inputs"><small>'+n+' · '+(i===1?'定价参照':'敏感性边界')+'</small><strong>'+fmt(v.cases[i],d)+'元</strong><p class="small">'+escapeHTML(formula(x,i))+'</p><p class="small">情景价格收益 '+(!x.model.targetDate||x.model.targetDate<=chinaToday()?'目标日未确认或已到期，不计远期收益':p===null?'缺行情':pct(v.cases[i]/p-1)+' · 至 '+escapeHTML(x.model.targetDate))+'</p></div>').join('')+'</div><p class="small">思源为2027专题；东鹏/长江为2026年度情景；其他核心按正常化年参照，未设退出日的情景不计算远期价格收益。ETF仍为历史前十与剩余篮子折价。6–18个月为投资期，3–6个月是经营核验窗口。三种情景不分配未经验证的概率，不计算虚假统计胜率。</p></section>';
  if(x.model.evidenceUrl)body+='<p class="small"><a href="'+escapeHTML(x.model.evidenceUrl)+'" target="_blank" rel="noopener">估值锚数据来源 ↗</a> · '+escapeHTML(x.model.reference||'')+'</p>';
- body+='<section class="section"><h3>条件关注区与反向核验</h3><p class="small">基准估值 '+fmt(v.ev,d)+'；'+(x.model.type==='lookthrough'?'持仓穿透核心区 '+fmt(v.lo,d)+'–'+fmt(v.hi,d)+'，安全边际已经逐项计入，不再二次折现。':(x.model.reviewBuyZone?'沿用专题今天现值与条件区，不重复折现；':x.model.discountYears===0?'PB模型已经是现值，不再做半年折现；':'盈利情景值 '+fmt(v.terminalValue,2)+'按12%、'+fmt(x.model.discountYears??.5,2)+'年折现因子折为 '+fmt(v.pv,2)+'；该因子为沿用的估值压力余量，不代表实际退出日或保证回报。')+'相对模型现值的区间折价 '+safetyText(v)+'；条件区 '+fmt(v.lo,d)+'–'+fmt(v.hi,d)+' CNY。以上折价不能替代现金回报、再投资或资产归属核验。')+'</p>';
+ body+='<section class="section"><h3>条件关注区与反向核验</h3><p class="small">基准估值 '+fmt(v.ev,d)+'；'+(x.model.type==='lookthrough'?'持仓穿透核心区 '+fmt(v.lo,d)+'–'+fmt(v.hi,d)+'，安全边际已经逐项计入，不再二次折现。':(x.model.reviewBuyZone?'沿用专题今天现值与条件区，不重复折现；':x.model.type==='cash-dcf'?'现金情景已经是估值日现值，不做二次折现；':x.model.discountYears===0?'PB模型已经是现值，不再做半年折现；':'盈利情景值 '+fmt(v.terminalValue,2)+'按12%、'+fmt(x.model.discountYears??.5,2)+'年折现因子折为 '+fmt(v.pv,2)+'；该因子为沿用的估值压力余量，不代表实际退出日或保证回报。')+'相对模型现值的区间折价 '+safetyText(v)+'；条件区 '+fmt(v.lo,d)+'–'+fmt(v.hi,d)+' CNY。以上折价不能替代现金回报、再投资或资产归属核验。')+'</p>';
  if(p!==null&&x.additionReview?.bank){
  const b=x.additionReview.bank,needed=b.growth[1]+p/b.modelBps*(b.cost[1]-b.growth[1]);
  body+='<p>保持模型BPS、资本要求和增长不变，当前价格需要持续ROE约 '+fmt(needed*100,1)+'%；基准假设 '+fmt(b.roe[1]*100,1)+'%。这是反向条件，不是当期ROE预测。</p>';
- }else if(p!==null&&!x.model.targetDate&&x.model.type!=='fcf'&&x.model.type!=='index'&&x.model.type!=='lookthrough'){
+ }else if(p!==null&&!x.model.targetDate&&x.model.inputs&&x.model.multiples){
  const label=x.model.type==='pb'?'BPS':x.model.type==='opat'?'营运EPS':'EPS';
  body+='<p>按本轮基准倍数及同一折现口径，要使模型现值等于当前价格，需要 '+label+' '+fmt(impliedInput(x,p,v),2)+' 元；本轮基准假设为 '+fmt(x.model.inputs[1],2)+' 元。该反推未额外要求关注区安全边际，不证明公司能实现。</p>';
  }

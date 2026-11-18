@@ -16,7 +16,7 @@ function loadResearch() {
       if (end < 0) throw Error('Dashboard UI boundary changed; review alert loader');
       vm.runInContext(code.slice(0, end), ctx, {filename: file, timeout: 5000});
     } else {
-      if (!/^[a-z-]+\.js$/.test(file)) throw Error('Unexpected data script');
+      if (!/^[a-z][a-z0-9-]*\.js$/.test(file)) throw Error('Unexpected data script');
       vm.runInContext(fs.readFileSync(path.join(root, file), 'utf8'), ctx, {filename: file, timeout: 5000});
     }
   }

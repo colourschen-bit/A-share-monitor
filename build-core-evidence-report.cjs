@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('node:fs'),vm=require('node:vm');
 const ctx={window:{}};vm.createContext(ctx);
-for(const f of Array.from(fs.readFileSync('index.html','utf8').matchAll(/<script src="([^?]+)\?/g),m=>m[1]).filter(f=>f!=='app.js'))vm.runInContext(fs.readFileSync(f,'utf8'),ctx,{filename:f});
+for(const f of Array.from(fs.readFileSync('index.html','utf8').matchAll(/<script src="([^?]+)\?/g),m=>m[1]).filter(f=>f!=='app.js'&&!f.startsWith('tencent-review-')))vm.runInContext(fs.readFileSync(f,'utf8'),ctx,{filename:f});
 const r=ctx.window.RESEARCH,math=ctx.window.CORE_EVIDENCE_MATH;
 const core=r.assets.filter(x=>x.portfolio.included).sort((a,b)=>a.portfolio.rank-b.portfolio.rank);
 const f=(n,d=2)=>n.toFixed(d);

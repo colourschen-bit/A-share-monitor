@@ -4,7 +4,7 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
 class ReviewClock extends Date{constructor(...args){super(...(args.length?args:['2026-11-01T05:00:00Z']));}static now(){return new ReviewClock().getTime();}}
 const html=fs.readFileSync('index.html','utf8');
 // Preserve Nov 1 behavioural regressions as a historical baseline; current full stack is checked separately.
-const layers=Array.from(html.matchAll(/<script src="([^?]+)\?/g),m=>m[1]).filter(f=>!f.startsWith('full-review-'));
+const layers=Array.from(html.matchAll(/<script src="([^?]+)\?/g),m=>m[1]).filter(f=>!f.startsWith('full-review-')&&!f.startsWith('tencent-review-'));
 const nodes={};for(const m of html.matchAll(/id="([^"]+)"/g))nodes[m[1]]={value:'',innerHTML:'',textContent:'',options:[{},{},{}],showModal(){},close(){},remove(){}};
 nodes.tier.value='all';
 const ctx={window:{},console,Intl,Date:ReviewClock,setTimeout:()=>1,clearTimeout(){},document:{getElementById:id=>nodes[id]||null,createElement:()=>({}),body:{appendChild(){}}}};
