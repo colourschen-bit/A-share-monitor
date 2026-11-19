@@ -2,7 +2,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 class Clock extends Date{constructor(...a){super(...(a.length?a:['2026-11-18T11:00:00Z']));}}
 const html=fs.readFileSync('index.html','utf8');
-const scripts=[...html.matchAll(/<script src="([^?]+)\?/g)].map(m=>m[1]);
+const scripts=[...html.matchAll(/<script src="([^?]+)\?/g)].map(m=>m[1]).filter(f=>!f.startsWith('platform-valuation-'));
 const nodes={};for(const [,id] of html.matchAll(/id="([^"]+)"/g))nodes[id]={value:'',innerHTML:'',textContent:'',options:[{},{},{}],showModal(){},close(){},remove(){}};
 nodes.tier.value='all';
 const ctx=vm.createContext({window:{},console,Intl,Date:Clock,setTimeout:()=>1,clearTimeout(){},document:{getElementById:k=>nodes[k]||null,createElement:()=>({}),body:{appendChild(){}}}});

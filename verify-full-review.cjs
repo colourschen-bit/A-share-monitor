@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
 class Clock extends Date{constructor(...a){super(...(a.length?a:['2026-11-11T05:00:00Z']));}static now(){return new Clock().getTime();}}
-const html=fs.readFileSync('index.html','utf8'),layers=[...html.matchAll(/<script src="([^?]+)\?/g)].map(m=>m[1]).filter(f=>!f.startsWith('tencent-review-'));
+const html=fs.readFileSync('index.html','utf8'),layers=[...html.matchAll(/<script src="([^?]+)\?/g)].map(m=>m[1]).filter(f=>!f.startsWith('tencent-review-')&&!f.startsWith('platform-valuation-'));
 const nodes={};for(const m of html.matchAll(/id="([^"]+)"/g))nodes[m[1]]={value:'',innerHTML:'',textContent:'',options:[{},{},{}],showModal(){},close(){},remove(){}};nodes.tier.value='all';
 const ctx={window:{},console,Intl,Date:Clock,setTimeout:()=>1,clearTimeout(){},document:{getElementById:k=>nodes[k]||null,createElement:()=>({}),body:{appendChild(){}}}};vm.createContext(ctx);
 let before;for(const f of layers){if(f.startsWith('full-review-'))before=JSON.parse(JSON.stringify(ctx.window.RESEARCH.assets.map(x=>({code:x.code,model:x.model,gate:x.gate,hold:x.executionHold}))));vm.runInContext(fs.readFileSync(f,'utf8'),ctx,{filename:f});}

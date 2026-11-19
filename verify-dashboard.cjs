@@ -6,3 +6,5 @@ require('./verify-quarterly.cjs');
 require('./verify-full-review.cjs');
 
 require('./verify-tencent-review.cjs');
+
+require('./verify-platform-valuation.cjs');
